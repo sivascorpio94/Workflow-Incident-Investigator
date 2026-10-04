@@ -1,0 +1,5 @@
+package dev.incident.domain;
+
+public enum CauseCategory {
+    LOAD_SURGE, EXECUTOR_CONFIG_REGRESSION, DATABASE_SATURATION, RETRY_STORM, OTHER, UNDETERMINED
+}

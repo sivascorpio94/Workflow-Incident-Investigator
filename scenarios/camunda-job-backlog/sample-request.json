@@ -1,0 +1,73 @@
+{
+  "incidentId": "WF-2026-014",
+  "title": "Workflow engine job backlog growing, heap rising (WF-2026-014)",
+  "window": {
+    "start": "2026-03-12T09:30:00Z",
+    "end": "2026-03-12T10:30:00Z"
+  },
+  "evidence": [
+    {
+      "id": "E-ALERT-1",
+      "type": "ALERT",
+      "source": "monitoring",
+      "timestamp": "2026-03-12T10:02:00Z",
+      "content": "ALERT wf-job-backlog-high: pending jobs 18,400 (threshold 5,000) on wf-engine-prod. Heap usage 87% and rising. Job acquisition latency p95 9.8s."
+    },
+    {
+      "id": "E-MET-1",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-03-12T10:00:00Z",
+      "content": "Async process starts/min: 09:30=42, 09:36=45, 09:40=310, 09:45=420, 09:55=430, 10:00=415. Normal baseline 40-50/min."
+    },
+    {
+      "id": "E-MET-2",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-03-12T10:00:00Z",
+      "content": "Pending jobs: 09:30=210, 09:40=900, 09:50=7,800, 10:00=18,100. Backlog growth began ~09:40. Jobs acquired/min stays near 500 throughout."
+    },
+    {
+      "id": "E-MET-3",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-03-12T10:00:00Z",
+      "content": "Executor threads busy/max: 09:30=14/20, 09:45=20/20, 10:00=20/20. Before 10:05 deploy max was 20 (see deployment note)."
+    },
+    {
+      "id": "E-MET-4",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-03-12T10:00:00Z",
+      "content": "JVM heap: 09:30=48%, 09:50=71%, 10:00=86%. DB connection pool 22/50 in use, query p95 38ms - normal."
+    },
+    {
+      "id": "E-LOG-1",
+      "type": "LOG",
+      "source": "wf-engine",
+      "timestamp": "2026-03-12T09:41:10Z",
+      "content": "INFO ProcessStartService: bulk start request from batch-importer, 12000 async instances queued (businessKey prefix MIG-2026Q1)."
+    },
+    {
+      "id": "E-LOG-2",
+      "type": "LOG",
+      "source": "wf-engine",
+      "timestamp": "2026-03-12T09:58:30Z",
+      "content": "WARN JobExecutor: acquisition cycle took 9.4s; 0 acquisition failures, 0 optimistic-locking exceptions."
+    },
+    {
+      "id": "E-DEP-1",
+      "type": "DEPLOYMENT",
+      "source": "deploy-notes",
+      "timestamp": "2026-03-12T10:05:00Z",
+      "content": "Deploy wf-engine 4.12.1 at 10:05: raised job executor maxPoolSize 20 -> 40. No other config changes. Rollout not yet complete at alert time (1 of 3 pods)."
+    },
+    {
+      "id": "E-RB-1",
+      "type": "RUNBOOK",
+      "source": "runbook",
+      "timestamp": "2026-03-01T00:00:00Z",
+      "content": "Runbook RB-WF-07 Job backlog. 1) Confirm backlog growth and compare job creation rate with acquisition rate. 2) Check executor busy vs max threads. 3) Check DB connection pool and slow queries. 4) Check failed-job/retry rates and downstream dependencies. 5) Review recent deployments for pool, retry or acquisition setting changes; a nearby deployment is a clue, not proof. Remediation (restart, rollback, throttling, executor changes) requires a human on-call decision and is out of scope for this assistant."
+    }
+  ]
+}

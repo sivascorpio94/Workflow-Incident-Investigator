@@ -1,0 +1,66 @@
+{
+  "incidentId": "WF-2026-033",
+  "title": "Workflow job backlog and failed-job surge (WF-2026-033)",
+  "window": {
+    "start": "2026-06-18T16:00:00Z",
+    "end": "2026-06-18T17:00:00Z"
+  },
+  "evidence": [
+    {
+      "id": "E-ALERT-1",
+      "type": "ALERT",
+      "source": "monitoring",
+      "timestamp": "2026-06-18T16:38:00Z",
+      "content": "ALERT wf-job-backlog-high: pending jobs 14,900. ALERT wf-failed-jobs-rate: 1,850 failures/min (baseline <5)."
+    },
+    {
+      "id": "E-MET-1",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-06-18T16:38:00Z",
+      "content": "New process starts/min: 60-70 steady. Retry-scheduled jobs/min: 16:20=15, 16:25=900, 16:35=2,300."
+    },
+    {
+      "id": "E-MET-2",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-06-18T16:38:00Z",
+      "content": "Pending jobs: 16:20=250, 16:25=2,000, 16:30=7,500, 16:38=14,800. Most pending jobs have retries<3 remaining and type=call-payments-api."
+    },
+    {
+      "id": "E-MET-3",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-06-18T16:38:00Z",
+      "content": "Executor threads busy/max: 20/20 from 16:25; mean job duration 30s (HTTP timeout). DB pool 18/50, query p95 35ms. Heap 60% flat."
+    },
+    {
+      "id": "E-LOG-1",
+      "type": "LOG",
+      "source": "wf-engine",
+      "timestamp": "2026-06-18T16:24:30Z",
+      "content": "ERROR PaymentsApiDelegate: HTTP 503 from payments-api.internal (read timeout 30000ms). Job retry scheduled in PT0S, retries left 2."
+    },
+    {
+      "id": "E-LOG-2",
+      "type": "LOG",
+      "source": "wf-engine",
+      "timestamp": "2026-06-18T16:31:00Z",
+      "content": "ERROR ... same 503/timeouts for 97% of call-payments-api jobs since 16:24; other job types succeed."
+    },
+    {
+      "id": "E-DEP-1",
+      "type": "DEPLOYMENT",
+      "source": "deploy-notes",
+      "timestamp": "2026-06-18T14:10:00Z",
+      "content": "Deploy wf-engine 4.14.0 at 14:10 (2h before incident): added retry policy R3/PT0S default for HTTP delegates (previously R3/PT5M). Stable for 2h before incident."
+    },
+    {
+      "id": "E-RB-1",
+      "type": "RUNBOOK",
+      "source": "runbook",
+      "timestamp": "2026-03-01T00:00:00Z",
+      "content": "Runbook RB-WF-07 Job backlog. 1) Confirm backlog growth and compare job creation rate with acquisition rate. 2) Check executor busy vs max threads. 3) Check DB connection pool and slow queries. 4) Check failed-job/retry rates and downstream dependencies. 5) Review recent deployments for pool, retry or acquisition setting changes; a nearby deployment is a clue, not proof. Remediation (restart, rollback, throttling, executor changes) requires a human on-call decision and is out of scope for this assistant."
+    }
+  ]
+}

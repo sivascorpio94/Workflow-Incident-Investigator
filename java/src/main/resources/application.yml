@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: incident-assistant
+  ai:
+    model:
+      chat: bedrock-converse
+    bedrock:
+      aws:
+        region: ${AWS_REGION:us-east-2}
+      converse:
+        chat:
+          options:
+            # Must be a chat model enabled for your account/region (inference-profile ids such as us.* are fine).
+            model: ${BEDROCK_MODEL_ID:}
+            temperature: 0.1
+            max-tokens: 4000
+incident:
+  model:
+    provider: bedrock
+logging:
+  pattern:
+    level: "%5p [%X{investigationId:-}]"

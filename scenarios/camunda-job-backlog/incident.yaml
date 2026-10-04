@@ -1,0 +1,6 @@
+# Expected answer - used ONLY by evaluation. Never sent to the live investigation.
+incidentId: WF-2026-014
+expectedRootCause: LOAD_SURGE
+requiredEvidence: [E-LOG-1, E-MET-1, E-MET-2]
+mustNotConcludeAsPrimary: [EXECUTOR_CONFIG_REGRESSION, DATABASE_SATURATION]
+notes: "Backlog starts ~09:40 after the batch import, before the 10:05 deploy (which raised, not lowered, capacity). DB is healthy. Deploy timing is a red herring."

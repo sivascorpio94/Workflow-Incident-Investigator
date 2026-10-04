@@ -1,0 +1,6 @@
+# Expected answer - used ONLY by evaluation. Never sent to the live investigation.
+incidentId: WF-2026-021
+expectedRootCause: EXECUTOR_CONFIG_REGRESSION
+requiredEvidence: [E-DEP-1, E-LOG-1, E-MET-3]
+mustNotConcludeAsPrimary: [LOAD_SURGE, DATABASE_SATURATION]
+notes: "Load is flat, DB and heap healthy; executor pinned at 4/4 immediately after deploy that reduced maxPoolSize 20->4."

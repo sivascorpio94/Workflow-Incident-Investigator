@@ -1,0 +1,73 @@
+{
+  "incidentId": "WF-2026-027",
+  "title": "Workflow job backlog with slow acquisition (WF-2026-027)",
+  "window": {
+    "start": "2026-05-09T02:00:00Z",
+    "end": "2026-05-09T03:00:00Z"
+  },
+  "evidence": [
+    {
+      "id": "E-ALERT-1",
+      "type": "ALERT",
+      "source": "monitoring",
+      "timestamp": "2026-05-09T02:35:00Z",
+      "content": "ALERT wf-job-backlog-high: pending jobs 11,200. ALERT db-connection-pool-exhausted wf-engine-prod (50/50)."
+    },
+    {
+      "id": "E-MET-1",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-05-09T02:35:00Z",
+      "content": "Async process starts/min: 55-60 steady (baseline 50-70)."
+    },
+    {
+      "id": "E-MET-2",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-05-09T02:35:00Z",
+      "content": "Pending jobs: 02:00=300, 02:15=1,500, 02:25=6,000, 02:35=11,100."
+    },
+    {
+      "id": "E-MET-3",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-05-09T02:35:00Z",
+      "content": "Executor threads busy/max: 20/20 from 02:15, of which ~17 are in state WAITING for a DB connection. Max pool unchanged at 20."
+    },
+    {
+      "id": "E-MET-4",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-05-09T02:35:00Z",
+      "content": "DB connection pool in use: 02:00=24/50, 02:15=50/50, 02:35=50/50. DB query p95: 02:00=40ms, 02:15=2.8s, 02:35=4.4s. Pending connection requests 63."
+    },
+    {
+      "id": "E-LOG-1",
+      "type": "LOG",
+      "source": "wf-engine",
+      "timestamp": "2026-05-09T02:16:20Z",
+      "content": "WARN HikariPool-1: Connection is not available, request timed out after 30000ms (x412 in 10 min)."
+    },
+    {
+      "id": "E-LOG-2",
+      "type": "LOG",
+      "source": "database",
+      "timestamp": "2026-05-09T02:12:00Z",
+      "content": "INFO slow query: UPDATE ACT_RU_JOB SET LOCK_OWNER_ ... mean 2.6s; autovacuum on ACT_RU_JOB and nightly reporting export (reporting-svc) started 02:10 holding long scans."
+    },
+    {
+      "id": "E-DEP-1",
+      "type": "DEPLOYMENT",
+      "source": "deploy-notes",
+      "timestamp": "2026-05-09T01:50:00Z",
+      "content": "Deploy wf-engine 4.13.1 at 01:50: log message wording and dependency patch bump only. No executor, pool or retry config changes."
+    },
+    {
+      "id": "E-RB-1",
+      "type": "RUNBOOK",
+      "source": "runbook",
+      "timestamp": "2026-03-01T00:00:00Z",
+      "content": "Runbook RB-WF-07 Job backlog. 1) Confirm backlog growth and compare job creation rate with acquisition rate. 2) Check executor busy vs max threads. 3) Check DB connection pool and slow queries. 4) Check failed-job/retry rates and downstream dependencies. 5) Review recent deployments for pool, retry or acquisition setting changes; a nearby deployment is a clue, not proof. Remediation (restart, rollback, throttling, executor changes) requires a human on-call decision and is out of scope for this assistant."
+    }
+  ]
+}
