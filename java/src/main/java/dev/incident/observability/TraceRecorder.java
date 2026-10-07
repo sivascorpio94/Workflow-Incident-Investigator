@@ -44,6 +44,8 @@ public class TraceRecorder {
             return result.value();
         } catch (RuntimeException e) {
             record(name, start, Outcome.FAILED, safeError(e), null, null);
+            // Full detail (may include provider text) only at DEBUG, local logs only; never in API responses.
+            log.debug("step={} failure detail", name, e);
             throw e;
         } finally {
             restore(previous);
