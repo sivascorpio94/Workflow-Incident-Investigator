@@ -47,7 +47,19 @@ aws bedrock create-inference-profile --region <REGION> \
 Use the returned `inferenceProfileArn` as `BEDROCK_MODEL_ID`. Activate the `project` tag as a cost-allocation tag in
 Billing. Add a budget alert; a full 4-scenario eval is only ~16 model calls, but alarms are cheap.
 
-## 5. Run
+## 5. Keys in a `.env` file
+
+Copy `.env.example` to `.env` (git-ignored) and fill it in. Python loads it automatically; for Java load it into the
+shell first, because the AWS SDK reads real environment variables, not Spring properties:
+
+```bash
+set -a; source .env; set +a
+```
+
+Prefer a profile or a Bedrock API key (`AWS_BEARER_TOKEN_BEDROCK`) over long-lived access keys, and never paste a key
+into chat, code, or a commit.
+
+## 6. Run
 
 ```bash
 export AWS_PROFILE=incident-assistant AWS_REGION=<REGION> BEDROCK_MODEL_ID=<model id or inference profile ARN>

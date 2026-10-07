@@ -3,7 +3,7 @@ name = "incident-graph"
 version = "0.1.0"
 description = "Read-only incident investigation assistant: LangGraph + Bedrock + LangSmith (comparison implementation)"
 requires-python = ">=3.11"
-dependencies = ["langgraph>=1.0", "langchain-aws>=1.0", "langsmith>=0.4", "pydantic>=2.7", "pyyaml>=6"]
+dependencies = ["langgraph>=1.0", "langchain-aws>=1.0", "langsmith>=0.4", "pydantic>=2.7", "pyyaml>=6", "python-dotenv>=1"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

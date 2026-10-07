@@ -13,6 +13,16 @@ from .models import InvestigationRequest
 from .scoring import load_scenarios, score
 
 
+def _load_dotenv() -> None:
+    """Load ../.env or ./.env into the environment if python-dotenv is installed. Existing variables win."""
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    for path in (".env", "../.env"):
+        load_dotenv(path, override=False)
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="incident_graph")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -22,6 +32,7 @@ def main(argv=None) -> int:
     ev.add_argument("--dir", default="../scenarios")
     ev.add_argument("--langsmith", action="store_true", help="upload dataset and run as a LangSmith experiment")
     args = p.parse_args(argv)
+    _load_dotenv()
     llm = BedrockLLM()
 
     if args.cmd == "investigate":

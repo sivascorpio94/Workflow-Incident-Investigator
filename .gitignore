@@ -3,3 +3,8 @@ java/target/
 .idea/
 .vscode/
 .DS_Store
+
+# secrets - never commit
+.env
+.env.*
+!.env.example
