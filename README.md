@@ -21,6 +21,8 @@ Contract shared by both: [`contracts/investigation-contract.md`](contracts/inves
 Scenarios (4, with expected answers kept in separate `incident.yaml` files that are never sent to the model):
 [`scenarios/`](scenarios). Design comparison and findings: [`docs/architecture-comparison.md`](docs/architecture-comparison.md).
 
+Using a separate Bedrock profile/policy/cost tag for this project: [`docs/bedrock-setup.md`](docs/bedrock-setup.md).
+
 ## Run the Java service
 
 Needs a JDK (21+; the plan's Java 25 works - change `java.version` in `pom.xml`) and Maven.

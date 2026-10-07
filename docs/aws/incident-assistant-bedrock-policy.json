@@ -1,0 +1,15 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "InvokeOnlyThisProjectsModels",
+      "Effect": "Allow",
+      "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+      "Resource": [
+        "arn:aws:bedrock:*::foundation-model/<MODEL_ID_WITHOUT_us._PREFIX>",
+        "arn:aws:bedrock:<REGION>:<ACCOUNT_ID>:inference-profile/<SYSTEM_OR_APPLICATION_PROFILE_ID>",
+        "arn:aws:bedrock:<REGION>:<ACCOUNT_ID>:application-inference-profile/<APPLICATION_PROFILE_ID>"
+      ]
+    }
+  ]
+}
