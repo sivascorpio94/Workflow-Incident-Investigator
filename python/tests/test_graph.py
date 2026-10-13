@@ -221,3 +221,10 @@ def test_separation_penalises_a_close_runner_up():
     assert score(good_assessment(), s.request, s.expected)["separation"] == 1.0  # 0.8 vs 0.1
     amp = _scenario("surge-exhausts-db")  # a close second is legitimate there
     assert score(close, amp.request, amp.expected)["separation"] == 1.0
+
+
+def test_concision_also_counts_findings_beyond_eight():
+    s = _scenario("camunda-job-backlog")
+    many = good_assessment(findings=[Finding(claim=f"f{i}", kind=ClaimKind.HYPOTHESIS, evidence_ids=["E-MET-1"])
+                                     for i in range(15)])
+    assert abs(score(many, s.request, s.expected)["concision"] - 0.3) < 1e-9  # 7 extra findings

@@ -34,6 +34,7 @@ public class Scorer {
                     + "because|impl(?:y|ies|ied)|therefore|contribut\\w*|explain\\w*|consistent\\s+with|attribut\\w*)\\b",
             java.util.regex.Pattern.CASE_INSENSITIVE);
     private static final int MAX_LISTED = 5;
+    private static final int MAX_FINDINGS = 8;
 
     /** @param assessment null when the investigation failed (validation, model error) */
     public Score score(IncidentAssessment assessment, InvestigationRequest request, ExpectedAnswer expected) {
@@ -144,9 +145,10 @@ public class Scorer {
         return Math.max(0.0, Math.min(1.0, (p.confidence() - runnerUp - 0.1) / 0.2));
     }
 
-    /** Unknowns and recommendations beyond five each cost 0.1 per extra item. */
+    /** Unknowns and recommendations beyond five each, and findings beyond eight, cost 0.1 per extra item. */
     private static double concision(IncidentAssessment a) {
-        int excess = Math.max(0, a.unknowns().size() - MAX_LISTED) + Math.max(0, a.recommendations().size() - MAX_LISTED);
+        int excess = Math.max(0, a.unknowns().size() - MAX_LISTED) + Math.max(0, a.recommendations().size() - MAX_LISTED)
+                + Math.max(0, a.findings().size() - MAX_FINDINGS);
         return Math.max(0.0, 1.0 - 0.1 * excess);
     }
 

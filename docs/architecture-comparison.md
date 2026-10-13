@@ -129,6 +129,14 @@ Changes (generic, not tied to one scenario):
 - **New score dimension `separation`** (9 dimensions now): a runner-up within 0.1 of the diagnosis scores 0, 0.3 or more
   scores 1; skipped for under-determined and trigger-plus-amplifier scenarios. The 85% vs 72% answer above scores 0.15.
 
+**First live check after these changes (one run, Java, baseline scenario, in the UI):** timing is now stated correctly
+("3 min after the alert, 25 min after symptom onset"); the runner-up dropped from 72% to 35% (`OTHER`, with the model
+saying no evidence supports it), so `separation` would score 1.0; all recommendations read-only. Remaining: it returned
+15 findings against a prompt cap of 8 (the scorer now counts findings in `concision`), and the summary still ends with a
+mild conclusion ("ruling itself out as root cause"). The model also questioned why acquisition stayed near 500/min while
+starts were 420/min; that was a gap in the synthetic data (jobs per process start were not stated), so the baseline
+evidence now says each start creates roughly 3-4 async jobs. One run is an anecdote, not a measurement.
+
 Not fixed by these changes: there is still no deterministic check of timing claims in prose. Scores from this round are
 not comparable with round 2 (different rubric and prompts). The table above should be re-run and replaced.
 

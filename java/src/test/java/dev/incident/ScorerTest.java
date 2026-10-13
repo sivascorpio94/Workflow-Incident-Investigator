@@ -94,4 +94,11 @@ class ScorerTest {
                 List.of(CauseCategory.EXECUTOR_CONFIG_REGRESSION));
         assertThat(scorer.score(close, req, amplifier).dimensions().get(Scorer.SEPARATION)).isEqualTo(1.0);
     }
+
+    @Test void concisionAlsoCountsFindingsBeyondEight() {
+        var many = Fixtures.with(b -> b.findings(java.util.stream.IntStream.range(0, 15)
+                .mapToObj(i -> new Finding("f" + i, ClaimKind.HYPOTHESIS, List.of("E-MET-1"))).toList()));
+        assertThat(scorer.score(many, req, expected).dimensions().get(Scorer.CONCISION))
+                .isCloseTo(0.3, org.assertj.core.data.Offset.offset(1e-9)); // 7 extra findings
+    }
 }

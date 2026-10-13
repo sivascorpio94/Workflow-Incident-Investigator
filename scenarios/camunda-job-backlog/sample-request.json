@@ -18,7 +18,7 @@
       "type": "METRIC",
       "source": "metrics",
       "timestamp": "2026-03-12T10:00:00Z",
-      "content": "Async process starts/min: 09:30=42, 09:36=45, 09:40=310, 09:45=420, 09:55=430, 10:00=415. Normal baseline 40-50/min."
+      "content": "Async process starts/min: 09:30=42, 09:36=45, 09:40=310, 09:45=420, 09:55=430, 10:00=415. Normal baseline 40-50/min. Each process start creates roughly 3-4 async jobs."
     },
     {
       "id": "E-MET-2",

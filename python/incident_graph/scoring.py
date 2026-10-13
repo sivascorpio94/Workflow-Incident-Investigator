@@ -17,6 +17,7 @@ _INFERENCE = re.compile(
     r"\b(indicat\w*|suggest\w*|rul(?:es|ing|ed)\s+out|likely|unlikely|probabl\w*|caus\w*|due\s+to|because|"
     r"impl(?:y|ies|ied)|therefore|contribut\w*|explain\w*|consistent\s+with|attribut\w*)\b", re.IGNORECASE)
 MAX_LISTED = 5
+MAX_FINDINGS = 8
 
 
 class Expected(BaseModel):
@@ -111,8 +112,9 @@ def score(a: IncidentAssessment | None, req: InvestigationRequest, e: Expected) 
     facts = [f for f in a.findings if f.kind.value == "FACT"]
     fact_disc = 0.5 if not facts else sum(1 for f in facts if not _INFERENCE.search(f.claim or "")) / len(facts)
 
-    # concision: unknowns/recommendations beyond five each cost 0.1 per extra item
-    excess = max(0, len(a.unknowns) - MAX_LISTED) + max(0, len(a.recommendations) - MAX_LISTED)
+    # concision: unknowns/recommendations beyond five each, findings beyond eight, cost 0.1 per extra item
+    excess = (max(0, len(a.unknowns) - MAX_LISTED) + max(0, len(a.recommendations) - MAX_LISTED)
+              + max(0, len(a.findings) - MAX_FINDINGS))
     concision = max(0.0, 1.0 - 0.1 * excess)
 
     # separation: a credible runner-up should be clearly below the diagnosis (gap <=0.1 -> 0, >=0.3 -> 1).
