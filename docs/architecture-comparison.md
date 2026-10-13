@@ -57,7 +57,7 @@ inferences labelled FACT, and over-long output (9 unknowns, 8 recommendations). 
 causes, missing evidence -> UNDETERMINED) and stricter scoring are the next step. Single run per scenario, so no
 variance estimate yet.
 
-## Round 2: harder scenarios, stricter scorer, tighter prompts (offline-verified, live results pending)
+## Round 2: harder scenarios, stricter scorer, tighter prompts
 
 Changes made after round 1, all generic rather than tuned to one incident:
 - **Two new scenarios:** `insufficient-evidence` (only a backlog series exists; correct answer is `UNDETERMINED` with
@@ -73,7 +73,7 @@ Changes made after round 1, all generic rather than tuned to one incident:
 The `surge-exhausts-db` expectation is a judgement call (a reasonable engineer could rank the database first); it is
 documented in that scenario's `notes` and scored with partial credit rather than as a hard failure.
 
-## Round 2 results (live, 2026-10-13)
+## Round 2 results (live, 2026-10-13; superseded by round 3 below, 6-dimension-era prompts)
 
 Same model (`us.anthropic.claude-haiku-4-5-20251001-v1:0`), same 8-dimension rubric, same prompts, one run each.
 Cells are overall score; dimensions below 1.00 are listed.
@@ -110,7 +110,7 @@ What this does and does not show:
 - **Tracing.** Java: hand-built per-step trace and correlation id, returned in the response. Python: per-step trace in
   the response; LangSmith tracing is wired but **not yet exercised**.
 
-## Round 3: fixes after reading a real answer in the UI (offline-verified, live re-run pending)
+## Round 3: fixes after reading a real answer in the UI
 
 Reading a live Java answer in the UI exposed problems the round-2 scorer missed (all scored ~1.00):
 - The summary said the 10:05 deployment came "3 minutes after symptom onset"; onset was ~09:40, so it was ~25 minutes
@@ -138,9 +138,43 @@ starts were 420/min; that was a gap in the synthetic data (jobs per process star
 evidence now says each start creates roughly 3-4 async jobs. One run is an anecdote, not a measurement.
 
 Not fixed by these changes: there is still no deterministic check of timing claims in prose. Scores from this round are
-not comparable with round 2 (different rubric and prompts). The table above should be re-run and replaced.
+not comparable with round 2 (different rubric and prompts); the live results are in the next section.
+
+## Round 3 results (live, 2026-10-13): final prompts, 9-dimension rubric, one run each
+
+Model `us.anthropic.claude-haiku-4-5-20251001-v1:0`, temperature 0.1. Overall score per scenario; dimensions below 1.00
+are listed (`fact` = factDiscipline, `sep` = separation, `alt` = alternatives).
+
+| Scenario | Correct cause? | Java + Spring AI | Python + LangGraph |
+|---|---|---|---|
+| camunda-job-backlog | yes (both) | 0.99 (fact 0.88) | 0.90 (fact 0.83, sep 0.25) |
+| database-saturation | yes (both) | 0.97 (fact 0.75) | 0.99 (fact 0.88) |
+| executor-capacity-regression | yes (both) | 1.00 | 0.88 (fact 0.75, sep 0.20) |
+| insufficient-evidence | yes (both, `UNDETERMINED`) | 0.98 (fact 0.83) | 0.98 (fact 0.80) |
+| retry-storm | yes (both) | 0.94 (sep 0.50) | 0.89 (sep 0.00) |
+| surge-exhausts-db | yes (both, `LOAD_SURGE` first) | 1.00 | 0.97 (alt 0.85, fact 0.86) |
+| **Mean** | **12 / 12 correct** | **0.98** | **0.93** |
+
+Java eval wall time: 3 min 12 s for all six scenarios (about 30 s each; verifier 17-20 s, analysts 7-12 s in parallel).
+Python eval wall time was not recorded.
+
+How to read this:
+- **Diagnosis quality is the same:** 12 of 12 correct, including the `UNDETERMINED` case and the trigger-plus-amplifier
+  case. Same model, same prompts, same contract.
+- **The 0.05 gap in the mean is not evidence that Java is better.** It comes almost entirely from `separation`: in the
+  Python run three scenarios had a runner-up within 0.1-0.3 of the diagnosis (scores 0.25, 0.20, 0.00), in the Java run
+  one did (0.50). With identical prompts and one run per scenario, that is most likely model run-to-run variation in the
+  confidence numbers. Repeat runs (say 5 per scenario, reporting mean and range) would be needed to claim a framework
+  effect, and I would not expect one.
+- **`separation` is a blunt measure.** A low value means the model gave a close second hypothesis; it does not say whether
+  that was wrong. Some scenarios (e.g. a retry storm amplified by a policy change) legitimately have two plausible
+  contributors. Read the answers before judging.
+- **Fact discipline remains the weakest dimension** (0.75-1.00): the model still labels some interpretation as FACT.
+- **Overall scores are lower than round 2's 0.98-0.99 by construction:** the rubric gained `separation` and a findings
+  cap, so the two rounds are not comparable. Round 2's perfect-looking scores were partly a lenient rubric.
 
 ## Still to measure
 
-Repeat runs for variance (e.g. 5 per scenario), a larger model, per-step latency and token totals for Python,
-LangSmith traces and experiment view (`python -m incident_graph eval --langsmith`).
+Repeat runs for variance (e.g. 5 per scenario, mean and range), a larger model, per-step latency and token totals for
+Python. LangSmith tracing and an experiment (`python -m incident_graph eval --langsmith`) ran once on 2026-10-13
+(round 2 prompts); its scores were not transcribed here.

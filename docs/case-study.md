@@ -26,14 +26,18 @@ evidence where the right answer is `UNDETERMINED`. Each is scored on eight rule-
 root cause, confidence calibration, alternatives considered, safe recommendations, format validity, fact-versus-inference
 discipline, and concision.
 
-## Results (Claude Haiku 4.5, one run each)
-Both implementations chose the correct primary cause in 6 of 6 scenarios (mean 0.99 Java, 0.98 Python). Details and
+## Results (Claude Haiku 4.5, one run each, final prompts and rubric)
+Both implementations chose the correct primary cause in 12 of 12 runs (6 scenarios x 2). The mean score on the
+nine-dimension rubric was 0.98 for Java and 0.93 for Python; the gap comes from how close the runner-up hypothesis was
+and, with identical prompts and one run each, is most likely model variance rather than a framework effect. Details and
 caveats: [`architecture-comparison.md`](architecture-comparison.md).
 
 ## What I learned
 - The first rubric scored a flawed answer 1.00 (a wrong deployment-timing claim, a metric mix-up, inferences labelled as
   facts, nine unknowns). Reading the output, not just the score, is what led to the stricter rubric and tighter prompts.
 - Concision improved to 1.00 after adding length caps; fact discipline is still the weakest dimension.
+- Reading real answers in the UI found flaws the scores missed (a wrong deployment-timing claim, a runner-up at 72%
+  against 85%). Fixing them took an application-computed timeline, clearer category rules and a `separation` check.
 - Most of the real friction was credentials and configuration, not the AI logic.
 
 ## Limits
