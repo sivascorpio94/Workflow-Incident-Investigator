@@ -39,7 +39,7 @@ RUNBOOK timestamps are unconstrained.
     "remediationExecuted": false
   },
   "trace": { "investigationId": "uuid",
-             "steps": [ { "name": "triage|runtime-analyst|change-analyst|verifier|validate",
+             "steps": [ { "name": "validate-request|triage|runtime-analyst|change-analyst|verifier|validate",
                           "durationMs": 0, "outcome": "OK|FAILED", "error": null,
                           "promptTokens": null, "completionTokens": null } ] }
 }
@@ -55,3 +55,12 @@ every cited evidence id exists in the request; every `FACT` cites at least one i
 
 RFC 7807 `application/problem+json` with `investigationId` and `violations` properties.
 400 invalid request - 422 model output failed validation - 502 model/provider error.
+
+## Helper endpoints (used by the demo UI; same on both backends)
+
+- `GET /api/info` returns `{ "backend": "<label>" }`.
+- `GET /api/scenarios` returns `[ { "name", "request": <InvestigationRequest>, "expected": { "rootCause", "notes" } } ]`.
+  `expected` is ground truth for the UI's "Reveal expected answer" button; it is never sent to a model.
+- `GET /` serves the shared single-page UI from [`ui/`](../ui).
+
+Cross-origin calls are allowed only from `http://localhost:*` and `http://127.0.0.1:*`.
