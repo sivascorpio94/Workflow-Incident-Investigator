@@ -59,7 +59,8 @@ def main(argv=None) -> int:
         sc = score(a, s.request, s.expected)
         total += sc["overall"]
         got = a.hypotheses[0].category.value if a and a.hypotheses else "-"
-        print(f"{s.name:30s} expected={s.expected.expected_root_cause.value:28s} got={got:28s} overall={sc['overall']:.2f}")
+        dims = " ".join(f"{k}={v:.2f}" for k, v in sc.items() if k != "overall")
+        print(f"{s.name:30s} expected={s.expected.expected_root_cause.value:28s} got={got:28s} {dims} overall={sc['overall']:.2f}")
     print(f"MEAN overall = {total / max(1, len(scenarios)):.2f} over {len(scenarios)} scenarios")
     return 0
 
