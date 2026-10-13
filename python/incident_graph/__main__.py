@@ -1,4 +1,5 @@
 """CLI:  python -m incident_graph investigate ../scenarios/<name>/sample-request.json
+        python -m incident_graph serve [--port 8000]   (UI at http://localhost:8000)
         python -m incident_graph eval [--langsmith]
 Tracing: set LANGSMITH_TRACING=true, LANGSMITH_API_KEY, LANGSMITH_PROJECT (keys stay in the environment)."""
 from __future__ import annotations
@@ -28,12 +29,21 @@ def main(argv=None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
     inv = sub.add_parser("investigate")
     inv.add_argument("request")
+    sv = sub.add_parser("serve", help="HTTP API + web UI")
+    sv.add_argument("--port", type=int, default=8000)
+    sv.add_argument("--host", default="127.0.0.1")
     ev = sub.add_parser("eval")
     ev.add_argument("--dir", default="../scenarios")
     ev.add_argument("--langsmith", action="store_true", help="upload dataset and run as a LangSmith experiment")
     args = p.parse_args(argv)
     _load_dotenv()
     llm = BedrockLLM()
+
+    if args.cmd == "serve":
+        import uvicorn
+        from .web import create_app
+        uvicorn.run(create_app(llm), host=args.host, port=args.port)
+        return 0
 
     if args.cmd == "investigate":
         req = InvestigationRequest.model_validate_json(open(args.request).read())
