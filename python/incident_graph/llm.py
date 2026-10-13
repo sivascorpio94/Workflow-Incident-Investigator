@@ -21,11 +21,25 @@ class StructuredLLM(Protocol):
     def __call__(self, step: str, system: str, user: str, schema: type[T]) -> LLMResult: ...
 
 
+def _isolate_from_aws_profiles_when_using_api_key() -> None:
+    """With a Bedrock API key (AWS_BEARER_TOKEN_BEDROCK) no AWS profile is needed, but botocore still reads
+    ~/.aws/config while building the client. A stale or unsupported profile (e.g. an expired `aws login` session,
+    which needs botocore[crt]) then fails client creation before the key is ever used. Point botocore at empty config
+    files for this process so only the key is used. Affects this process only; real files are untouched."""
+    if os.environ.get("AWS_BEARER_TOKEN_BEDROCK"):
+        os.environ["AWS_CONFIG_FILE"] = os.devnull
+        os.environ["AWS_SHARED_CREDENTIALS_FILE"] = os.devnull
+        for var in ("AWS_PROFILE", "AWS_DEFAULT_PROFILE"):
+            os.environ.pop(var, None)
+
+
 class BedrockLLM:
     """Bedrock Converse chat model returning typed output. No tools are bound to the model."""
 
     def __init__(self, model_id: str | None = None, region: str | None = None):
         from langchain_aws import ChatBedrockConverse  # imported lazily so tests need no AWS libs configured
+
+        _isolate_from_aws_profiles_when_using_api_key()
 
         model_id = model_id or os.environ.get("BEDROCK_MODEL_ID")
         if not model_id:
