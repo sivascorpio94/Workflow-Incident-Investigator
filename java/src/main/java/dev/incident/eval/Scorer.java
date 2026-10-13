@@ -26,6 +26,7 @@ public class Scorer {
     public static final String FORMAT = "formatValidity";
     public static final String FACT_DISCIPLINE = "factDiscipline";
     public static final String CONCISION = "concision";
+    public static final String SEPARATION = "separation";
 
     /** Words that signal inference. A claim labelled FACT should restate evidence, not interpret it. */
     private static final java.util.regex.Pattern INFERENCE = java.util.regex.Pattern.compile(
@@ -38,7 +39,7 @@ public class Scorer {
     public Score score(IncidentAssessment assessment, InvestigationRequest request, ExpectedAnswer expected) {
         Map<String, Double> d = new LinkedHashMap<>();
         if (assessment == null) {
-            for (String k : List.of(CITATIONS, ROOT_CAUSE, CALIBRATION, ALTERNATIVES, SAFETY, FORMAT, FACT_DISCIPLINE, CONCISION)) d.put(k, 0.0);
+            for (String k : List.of(CITATIONS, ROOT_CAUSE, CALIBRATION, ALTERNATIVES, SAFETY, FORMAT, FACT_DISCIPLINE, CONCISION, SEPARATION)) d.put(k, 0.0);
             return new Score(d, 0.0);
         }
         boolean rootOk = rootCauseCorrect(assessment, expected);
@@ -50,6 +51,7 @@ public class Scorer {
         d.put(FORMAT, 1.0); // reaching the scorer means the application validators accepted the output
         d.put(FACT_DISCIPLINE, factDiscipline(assessment));
         d.put(CONCISION, concision(assessment));
+        d.put(SEPARATION, separation(assessment, expected));
         double overall = d.values().stream().mapToDouble(Double::doubleValue).average().orElse(0);
         return new Score(d, overall);
     }
@@ -126,6 +128,20 @@ public class Scorer {
         if (facts.isEmpty()) return 0.5;
         long clean = facts.stream().filter(f -> f.claim() == null || !INFERENCE.matcher(f.claim()).find()).count();
         return (double) clean / facts.size();
+    }
+
+    /**
+     * A credible runner-up should be clearly below the diagnosis. Gap of 0.1 or less scores 0, 0.3 or more scores 1.
+     * Skipped (scores 1) where a close second is legitimate: under-determined cases and trigger-plus-amplifier cases.
+     */
+    private static double separation(IncidentAssessment a, ExpectedAnswer e) {
+        if (e.maxConfidence() != null || !e.mustMention().isEmpty()) return 1.0;
+        Hypothesis p = primary(a);
+        if (p == null) return 0.0;
+        double runnerUp = a.hypotheses().stream().skip(1).filter(h -> h.category() != p.category())
+                .mapToDouble(Hypothesis::confidence).max().orElse(Double.NEGATIVE_INFINITY);
+        if (runnerUp == Double.NEGATIVE_INFINITY) return 1.0;
+        return Math.max(0.0, Math.min(1.0, (p.confidence() - runnerUp - 0.1) / 0.2));
     }
 
     /** Unknowns and recommendations beyond five each cost 0.1 per extra item. */

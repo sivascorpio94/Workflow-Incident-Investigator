@@ -110,6 +110,28 @@ What this does and does not show:
 - **Tracing.** Java: hand-built per-step trace and correlation id, returned in the response. Python: per-step trace in
   the response; LangSmith tracing is wired but **not yet exercised**.
 
+## Round 3: fixes after reading a real answer in the UI (offline-verified, live re-run pending)
+
+Reading a live Java answer in the UI exposed problems the round-2 scorer missed (all scored ~1.00):
+- The summary said the 10:05 deployment came "3 minutes after symptom onset"; onset was ~09:40, so it was ~25 minutes
+  after onset and 3 minutes after the *alert* (alert time confused with onset time).
+- The runner-up `EXECUTOR_CONFIG_REGRESSION` was at 72% against 85% for the diagnosis, with no evidence of a reduced or
+  misconfigured executor (the deployment raised capacity) and no contradicting evidence cited.
+- Interpretation ("indicating the thread pool was the primary bottleneck") appeared in the summary, which the
+  fact-discipline check does not inspect.
+
+Changes (generic, not tied to one scenario):
+- **Application-computed timeline** of evidence timestamps, sorted, added to analyst and verifier prompts, with
+  rules to keep alert time, symptom onset and change time separate and to compute gaps from the timeline.
+- **Prompt rules:** a contradicted hypothesis gets confidence <= 0.2 and must cite the contradicting evidence; check the
+  direction of each change; `EXECUTOR_CONFIG_REGRESSION` only when settings were reduced or misconfigured, while
+  "fixed capacity too small for higher load" is `LOAD_SURGE`; interpretation belongs in hedged hypotheses, not summaries.
+- **New score dimension `separation`** (9 dimensions now): a runner-up within 0.1 of the diagnosis scores 0, 0.3 or more
+  scores 1; skipped for under-determined and trigger-plus-amplifier scenarios. The 85% vs 72% answer above scores 0.15.
+
+Not fixed by these changes: there is still no deterministic check of timing claims in prose. Scores from this round are
+not comparable with round 2 (different rubric and prompts). The table above should be re-run and replaced.
+
 ## Still to measure
 
 Repeat runs for variance (e.g. 5 per scenario), a larger model, per-step latency and token totals for Python,

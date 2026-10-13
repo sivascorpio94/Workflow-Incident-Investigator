@@ -17,8 +17,16 @@ Rules for claims:
   interpret, rule in or out, or attribute to a cause is kind=HYPOTHESIS, never FACT.
 - Use metric names exactly as the evidence does. Do not treat different metrics as the same thing
   (for example work creation/start rate versus work acquisition/processing rate).
-- When you mention a change or event relative to symptom onset, compare the actual timestamps and say
-  whether it came before or after; never assert an ordering you have not checked.
+- Keep three times separate: ALERT time (when the alert fired), SYMPTOM ONSET (when the affected series first
+  departs from its baseline, read from the metric or log values, not from the alert), and CHANGE time (when
+  a deployment happened). Use the sorted timeline provided to order them and compute the gaps. Only say a
+  change came "after onset" if its time is later than the onset you identified; a change just after the
+  alert can still be long after onset.
+- A hypothesis the evidence contradicts gets low confidence (0.2 or less) and must cite the contradicting
+  evidence. Check the direction of every change: a change that moved a setting in the helpful direction
+  cannot by itself explain the problem that setting addresses.
+- In summaries and descriptions, state what the evidence shows; put interpretation in clearly hedged
+  hypotheses ("may", "is consistent with"), not in the summary's conclusions.
 """
 
 TRIAGE = COMMON + """
@@ -44,7 +52,9 @@ VERIFIER = COMMON + """
 ROLE: Verifier and report writer. Check both analyst reports against the full evidence packet; discard or
 downgrade claims the evidence does not support. Weigh competing hypotheses, ordering `hypotheses` best
 supported first (the first is your diagnosis). `category` must be one of LOAD_SURGE (more incoming work than
-capacity), EXECUTOR_CONFIG_REGRESSION (executor/acquisition settings reduced or misconfigured),
+capacity, including when a fixed capacity is simply too small for a higher load),
+EXECUTOR_CONFIG_REGRESSION (use only if evidence shows executor/acquisition settings were reduced or
+misconfigured compared with before),
 DATABASE_SATURATION (DB pool/queries limit throughput), RETRY_STORM (failures plus retries amplify load),
 OTHER, UNDETERMINED. For each hypothesis give supporting and contradicting evidence ids and a calibrated
 confidence in [0,1]; keep confidence moderate when evidence is indirect, and list unknowns. Include at least
@@ -63,6 +73,14 @@ sentences per description or summary.
 """
 
 
+def timeline(all_items: list[EvidenceItem]) -> str:
+    """Sorted evidence timestamps, so the model never has to order times itself. Computed by the application."""
+    lines = "\n".join(f"{e.timestamp.isoformat()}  [{e.id}] {e.type.value}"
+                      for e in sorted(all_items, key=lambda e: e.timestamp))
+    return ("<timeline>\nEvidence timestamps, sorted (UTC). These are when each item was recorded; the time a symptom "
+            f"started must be read from the metric or log values.\n{lines}\n</timeline>")
+
+
 def evidence_block(items: list[EvidenceItem]) -> str:
     body = "\n\n".join(
         f"[{e.id}] type={e.type.value} source={e.source} time={e.timestamp.isoformat()}\n{e.content}" for e in items
@@ -74,9 +92,9 @@ def triage_user(incident_id, title, window, alerts):
     return f"Incident {incident_id}: {title}\nWindow: {window}\n\n{evidence_block(alerts)}"
 
 
-def analyst_user(incident_id, window, triage: TriageResult, items):
+def analyst_user(incident_id, window, triage: TriageResult, items, all_items):
     return (f"Incident {incident_id}\nWindow: {window}\nTriage summary: {triage.alert_summary}\n"
-            f"Symptoms: {'; '.join(triage.observed_symptoms)}\n\n{evidence_block(items)}")
+            f"Symptoms: {'; '.join(triage.observed_symptoms)}\n\n{timeline(all_items)}\n\n{evidence_block(items)}")
 
 
 def _render(r: AnalystReport) -> str:
@@ -87,5 +105,5 @@ def _render(r: AnalystReport) -> str:
 
 def verifier_user(incident_id, window, triage: TriageResult, runtime, change, all_items):
     return (f"Incident {incident_id}\nWindow: {window}\nTriage: {triage.affected_system} | {triage.alert_summary}\n\n"
-            f"Runtime analyst report:\n{_render(runtime)}\n\nChange analyst report:\n{_render(change)}\n\n"
-            f"{evidence_block(all_items)}")
+            f"{timeline(all_items)}\n\nRuntime analyst report:\n{_render(runtime)}\n\n"
+            f"Change analyst report:\n{_render(change)}\n\n{evidence_block(all_items)}")

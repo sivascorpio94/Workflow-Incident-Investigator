@@ -72,9 +72,14 @@ def test_happy_path_and_parallel_analysts():
 def test_analyst_evidence_routing():
     llm = FakeLLM()
     investigate(request(), llm)
-    assert "[E-MET-1]" in llm.prompts["runtime-analyst"] and "[E-DEP-1]" not in llm.prompts["runtime-analyst"]
-    assert "[E-DEP-1]" in llm.prompts["change-analyst"] and "[E-MET-1]" not in llm.prompts["change-analyst"]
-    assert "[E-MET-1]" in llm.prompts["verifier"] and "[E-DEP-1]" in llm.prompts["verifier"]
+    # Every analyst sees the sorted timeline (ids, times, types) but only its own evidence CONTENT.
+    deploy, metric = "Deploy wf-engine 4.12.1", "Async process starts/min"
+    rt, ch, vf = llm.prompts["runtime-analyst"], llm.prompts["change-analyst"], llm.prompts["verifier"]
+    assert "<timeline>" in rt and metric in rt and "bulk start request" in rt and deploy not in rt
+    assert "<timeline>" in ch and deploy in ch and "Runbook RB-WF-07" in ch and metric not in ch
+    assert "<timeline>" in vf and metric in vf and deploy in vf
+    # timeline is sorted: the 09:41 log precedes the 10:05 deployment
+    assert vf.index("2026-03-12T09:41:10+00:00  [E-LOG-1]") < vf.index("2026-03-12T10:05:00+00:00  [E-DEP-1]")
     assert "expectedRootCause" not in " ".join(llm.prompts.values())
 
 
@@ -203,3 +208,16 @@ def test_must_mention_rewards_naming_the_amplifier():
 def test_langsmith_eval_module_imports():
     import incident_graph.langsmith_eval as m
     assert callable(m.run_eval)
+
+
+def test_separation_penalises_a_close_runner_up():
+    s = _scenario("camunda-job-backlog")
+    close = good_assessment(hypotheses=[
+        Hypothesis(category=CauseCategory.LOAD_SURGE, description="surge", confidence=0.85,
+                   supporting_evidence_ids=["E-MET-1", "E-LOG-1", "E-MET-2"]),
+        Hypothesis(category=CauseCategory.EXECUTOR_CONFIG_REGRESSION, description="config", confidence=0.72,
+                   supporting_evidence_ids=["E-DEP-1"], contradicting_evidence_ids=["E-MET-1"])])
+    assert abs(score(close, s.request, s.expected)["separation"] - 0.15) < 1e-9
+    assert score(good_assessment(), s.request, s.expected)["separation"] == 1.0  # 0.8 vs 0.1
+    amp = _scenario("surge-exhausts-db")  # a close second is legitimate there
+    assert score(close, amp.request, amp.expected)["separation"] == 1.0

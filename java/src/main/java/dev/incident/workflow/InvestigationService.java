@@ -77,7 +77,7 @@ public class InvestigationService {
     private AnalystReport analyst(String step, String system, java.util.List<dev.incident.domain.EvidenceItem> items,
                                   InvestigationRequest request, TriageResult triage, String window, TraceRecorder trace) {
         AnalystReport report = guarded(step, trace, () -> model.call(step, system,
-                Prompts.analystUser(request.incidentId(), window, triage, items), AnalystReport.class));
+                Prompts.analystUser(request.incidentId(), window, triage, items, request.evidence()), AnalystReport.class));
         assessmentValidator.validateAnalyst(step, report, request);
         return report;
     }

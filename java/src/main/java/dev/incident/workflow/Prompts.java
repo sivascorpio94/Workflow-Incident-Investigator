@@ -23,8 +23,16 @@ final class Prompts {
               interpret, rule in or out, or attribute to a cause is kind=HYPOTHESIS, never FACT.
             - Use metric names exactly as the evidence does. Do not treat different metrics as the same thing
               (for example work creation/start rate versus work acquisition/processing rate).
-            - When you mention a change or event relative to symptom onset, compare the actual timestamps and say
-              whether it came before or after; never assert an ordering you have not checked.
+            - Keep three times separate: ALERT time (when the alert fired), SYMPTOM ONSET (when the affected series first
+              departs from its baseline, read from the metric or log values, not from the alert), and CHANGE time (when
+              a deployment happened). Use the sorted timeline provided to order them and compute the gaps. Only say a
+              change came "after onset" if its time is later than the onset you identified; a change just after the
+              alert can still be long after onset.
+            - A hypothesis the evidence contradicts gets low confidence (0.2 or less) and must cite the contradicting
+              evidence. Check the direction of every change: a change that moved a setting in the helpful direction
+              cannot by itself explain the problem that setting addresses.
+            - In summaries and descriptions, state what the evidence shows; put interpretation in clearly hedged
+              hypotheses ("may", "is consistent with"), not in the summary's conclusions.
             """;
 
     static final String TRIAGE = COMMON + """
@@ -54,7 +62,9 @@ final class Prompts {
             ROLE: Verifier and report writer. Check both analyst reports against the full evidence packet; discard or
             downgrade claims the evidence does not support. Weigh competing hypotheses, ordering `hypotheses` best
             supported first (the first is your diagnosis). `category` must be one of LOAD_SURGE (more incoming work than
-            capacity), EXECUTOR_CONFIG_REGRESSION (executor/acquisition settings reduced or misconfigured),
+            capacity, including when a fixed capacity is simply too small for a higher load),
+            EXECUTOR_CONFIG_REGRESSION (use only if evidence shows executor/acquisition settings were reduced or
+            misconfigured compared with before),
             DATABASE_SATURATION (DB pool/queries limit throughput), RETRY_STORM (failures plus retries amplify load),
             OTHER, UNDETERMINED. For each hypothesis give supporting and contradicting evidence ids and a calibrated
             confidence in [0,1]; keep confidence moderate when evidence is indirect, and list unknowns. Include at least
@@ -72,6 +82,16 @@ final class Prompts {
             sentences per description or summary.
             """;
 
+    /** Sorted evidence timestamps, so the model never has to order times itself. Computed by the application. */
+    static String timeline(List<EvidenceItem> all) {
+        String lines = all.stream()
+                .sorted(java.util.Comparator.comparing(EvidenceItem::timestamp))
+                .map(e -> "%s  [%s] %s".formatted(e.timestamp(), e.id(), e.type()))
+                .collect(Collectors.joining("\n"));
+        return "<timeline>\nEvidence timestamps, sorted (UTC). These are when each item was recorded; the time a symptom "
+                + "started must be read from the metric or log values.\n" + lines + "\n</timeline>";
+    }
+
     static String evidenceBlock(List<EvidenceItem> items) {
         String body = items.stream()
                 .map(e -> "[%s] type=%s source=%s time=%s\n%s".formatted(e.id(), e.type(), e.source(), e.timestamp(), e.content()))
@@ -83,16 +103,18 @@ final class Prompts {
         return "Incident %s: %s\nWindow: %s\n\n%s".formatted(incidentId, title, window, evidenceBlock(alerts));
     }
 
-    static String analystUser(String incidentId, String window, TriageResult triage, List<EvidenceItem> items) {
-        return "Incident %s\nWindow: %s\nTriage summary: %s\nSymptoms: %s\n\n%s".formatted(
-                incidentId, window, triage.alertSummary(), String.join("; ", triage.observedSymptoms()), evidenceBlock(items));
+    static String analystUser(String incidentId, String window, TriageResult triage, List<EvidenceItem> items,
+                              List<EvidenceItem> all) {
+        return "Incident %s\nWindow: %s\nTriage summary: %s\nSymptoms: %s\n\n%s\n\n%s".formatted(
+                incidentId, window, triage.alertSummary(), String.join("; ", triage.observedSymptoms()),
+                timeline(all), evidenceBlock(items));
     }
 
     static String verifierUser(String incidentId, String window, TriageResult triage,
                                AnalystReport runtime, AnalystReport change, List<EvidenceItem> all) {
-        return "Incident %s\nWindow: %s\nTriage: %s | %s\n\nRuntime analyst report:\n%s\n\nChange analyst report:\n%s\n\n%s"
+        return "Incident %s\nWindow: %s\nTriage: %s | %s\n\n%s\n\nRuntime analyst report:\n%s\n\nChange analyst report:\n%s\n\n%s"
                 .formatted(incidentId, window, triage.affectedSystem(), triage.alertSummary(),
-                        render(runtime), render(change), evidenceBlock(all));
+                        timeline(all), render(runtime), render(change), evidenceBlock(all));
     }
 
     private static String render(AnalystReport r) {

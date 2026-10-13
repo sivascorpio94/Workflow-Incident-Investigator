@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from .models import CauseCategory, IncidentAssessment, InvestigationRequest
 
 DIMENSIONS = ["citationAccuracy", "rootCause", "uncertaintyCalibration", "alternatives", "safeRecommendations",
-              "formatValidity", "factDiscipline", "concision"]
+              "formatValidity", "factDiscipline", "concision", "separation"]
 
 # Words that signal inference. A claim labelled FACT should restate evidence, not interpret it.
 _INFERENCE = re.compile(
@@ -115,7 +115,15 @@ def score(a: IncidentAssessment | None, req: InvestigationRequest, e: Expected) 
     excess = max(0, len(a.unknowns) - MAX_LISTED) + max(0, len(a.recommendations) - MAX_LISTED)
     concision = max(0.0, 1.0 - 0.1 * excess)
 
+    # separation: a credible runner-up should be clearly below the diagnosis (gap <=0.1 -> 0, >=0.3 -> 1).
+    # Skipped where a close second is legitimate (under-determined and trigger-plus-amplifier scenarios).
+    if e.max_confidence is not None or e.must_mention or primary is None:
+        separation = 1.0 if primary is not None else 0.0
+    else:
+        others = [h.confidence for h in a.hypotheses[1:] if h.category != primary.category]
+        separation = 1.0 if not others else max(0.0, min(1.0, (primary.confidence - max(others) - 0.1) / 0.2))
+
     dims = {"citationAccuracy": citations, "rootCause": root, "uncertaintyCalibration": cal,
             "alternatives": alt, "safeRecommendations": safe, "formatValidity": 1.0,
-            "factDiscipline": fact_disc, "concision": concision}
+            "factDiscipline": fact_disc, "concision": concision, "separation": separation}
     return {**dims, "overall": sum(dims.values()) / len(dims)}

@@ -80,7 +80,7 @@ def build_graph(llm: StructuredLLM):
             return {key: res.value, "steps": [step]}
 
         def _analyst_call(req, triage):
-            r = llm(step_name, system, prompts.analyst_user(req.incident_id, _window(req), triage, route(req, types)),
+            r = llm(step_name, system, prompts.analyst_user(req.incident_id, _window(req), triage, route(req, types), req.evidence),
                     AnalystReport)
             validate_analyst(step_name, r.value, req)
             return r

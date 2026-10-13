@@ -82,4 +82,16 @@ class ScorerTest {
         assertThat(scorer.score(both, req, compound).dimensions().get(Scorer.ALTERNATIVES)).isEqualTo(1.0);
         assertThat(scorer.score(only, req, compound).dimensions().get(Scorer.ALTERNATIVES)).isEqualTo(0.5);
     }
+
+    @Test void separationPenalisesACloseRunnerUp() {
+        var close = Fixtures.with(b -> b.hypotheses(List.of(
+                new Hypothesis(CauseCategory.LOAD_SURGE, "surge", 0.85, List.of("E-MET-1", "E-LOG-1"), List.of()),
+                new Hypothesis(CauseCategory.EXECUTOR_CONFIG_REGRESSION, "config", 0.72, List.of("E-DEP-1"), List.of("E-MET-1")))));
+        assertThat(scorer.score(close, req, expected).dimensions().get(Scorer.SEPARATION)).isCloseTo(0.15, org.assertj.core.data.Offset.offset(1e-9));
+        assertThat(scorer.score(Fixtures.assessment(), req, expected).dimensions().get(Scorer.SEPARATION)).isEqualTo(1.0); // 0.8 vs 0.15
+        // not applied where a close second is legitimate (cap or amplifier scenarios)
+        var amplifier = new ExpectedAnswer("INC-1", CauseCategory.LOAD_SURGE, List.of("E-MET-1"), List.of(), "", null,
+                List.of(CauseCategory.EXECUTOR_CONFIG_REGRESSION));
+        assertThat(scorer.score(close, req, amplifier).dimensions().get(Scorer.SEPARATION)).isEqualTo(1.0);
+    }
 }

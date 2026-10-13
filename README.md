@@ -29,7 +29,7 @@ Needs a JDK (21+; the plan's Java 25 works - change `java.version` in `pom.xml`)
 
 ```bash
 cd java
-mvn test                                  # 41 deterministic tests, no AWS needed
+mvn test                                  # 42 deterministic tests, no AWS needed
 export AWS_REGION=us-east-2               # credentials via AWS CLI profile / env vars; never commit them
 export BEDROCK_MODEL_ID=<chat model or inference profile enabled in your account>
 mvn spring-boot:run
@@ -43,7 +43,7 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--incident.eval.enabled=true --
 
 ```bash
 cd python && python -m venv .venv && . .venv/bin/activate && pip install -e '.[dev]'
-pytest                                    # 24 deterministic tests, no AWS/LangSmith needed
+pytest                                    # 25 deterministic tests, no AWS/LangSmith needed
 export AWS_REGION=us-east-2 BEDROCK_MODEL_ID=<same model>
 export LANGSMITH_TRACING=true LANGSMITH_API_KEY=<key> LANGSMITH_PROJECT=incident-investigator   # optional
 python -m incident_graph investigate ../scenarios/camunda-job-backlog/sample-request.json

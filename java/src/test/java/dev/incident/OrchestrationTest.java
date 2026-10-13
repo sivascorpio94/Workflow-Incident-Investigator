@@ -103,9 +103,17 @@ class OrchestrationTest {
     @Test void analystsReceiveOnlyTheirEvidenceTypesAndVerifierSeesEverything() throws Exception {
         useSampleCitations();
         send(body());
-        assertThat(stub.prompts.get("runtime-analyst")).contains("[E-MET-1]").contains("[E-LOG-1]").doesNotContain("[E-DEP-1]");
-        assertThat(stub.prompts.get("change-analyst")).contains("[E-DEP-1]").contains("[E-RB-1]").doesNotContain("[E-MET-1]");
-        assertThat(stub.prompts.get("verifier")).contains("[E-MET-1]").contains("[E-DEP-1]").contains("Runtime analyst report");
+        // Every analyst sees the sorted timeline (ids, times, types) but only its own evidence CONTENT.
+        String deployContent = "Deploy wf-engine 4.12.1", metricContent = "Async process starts/min";
+        assertThat(stub.prompts.get("runtime-analyst")).contains("<timeline>").contains(metricContent).contains("bulk start request")
+                .doesNotContain(deployContent);
+        assertThat(stub.prompts.get("change-analyst")).contains("<timeline>").contains(deployContent).contains("Runbook RB-WF-07")
+                .doesNotContain(metricContent);
+        assertThat(stub.prompts.get("verifier")).contains("<timeline>").contains(metricContent).contains(deployContent)
+                .contains("Runtime analyst report");
+        // timeline is sorted: the 09:41 log precedes the 10:05 deployment
+        String tl = stub.prompts.get("verifier");
+        assertThat(tl.indexOf("2026-03-12T09:41:10Z  [E-LOG-1]")).isLessThan(tl.indexOf("2026-03-12T10:05:00Z  [E-DEP-1]"));
     }
 
     @Test void expectedCauseIsNeverSentToTheModel() throws Exception {
