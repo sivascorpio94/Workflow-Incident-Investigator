@@ -1,0 +1,6 @@
+# Expected answer - used ONLY by evaluation. Never sent to the live investigation.
+incidentId: WF-2026-027
+expectedRootCause: DATABASE_SATURATION
+requiredEvidence: [E-MET-4, E-LOG-1, E-LOG-2]
+mustNotConcludeAsPrimary: [LOAD_SURGE, EXECUTOR_CONFIG_REGRESSION]
+notes: "Load flat, executor config unchanged, threads blocked on exhausted DB pool and slow DB. Deploy 01:50 is a benign red herring."

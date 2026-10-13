@@ -1,0 +1,7 @@
+# Expected answer - used ONLY by evaluation. Never sent to the live investigation.
+incidentId: WF-2026-052
+expectedRootCause: LOAD_SURGE
+requiredEvidence: [E-LOG-1, E-MET-1, E-MET-3]
+mustNotConcludeAsPrimary: [EXECUTOR_CONFIG_REGRESSION, RETRY_STORM]
+notes: "Two interacting causes. The 11:08 bulk start is the trigger; DB pool exhaustion at 11:14 is a consequence that amplifies the backlog. Best answer ranks LOAD_SURGE first and lists DATABASE_SATURATION as an amplifier. DATABASE_SATURATION first earns partial credit."
+mustMention: [DATABASE_SATURATION]

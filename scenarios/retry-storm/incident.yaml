@@ -1,0 +1,6 @@
+# Expected answer - used ONLY by evaluation. Never sent to the live investigation.
+incidentId: WF-2026-033
+expectedRootCause: RETRY_STORM
+requiredEvidence: [E-LOG-1, E-MET-1, E-DEP-1]
+mustNotConcludeAsPrimary: [LOAD_SURGE, DATABASE_SATURATION]
+notes: "Downstream payments-api outage starts 16:24; immediate retries (PT0S) amplify and hold executor threads on 30s timeouts. Deploy 2h earlier is a contributing amplifier, not the trigger."

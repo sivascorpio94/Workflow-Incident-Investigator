@@ -1,0 +1,10 @@
+java/target/
+*.log
+.idea/
+.vscode/
+.DS_Store
+
+# secrets - never commit
+.env
+.env.*
+!.env.example

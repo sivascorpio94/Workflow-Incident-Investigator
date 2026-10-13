@@ -1,0 +1,45 @@
+{
+  "incidentId": "WF-2026-041",
+  "title": "Workflow job backlog, limited telemetry available (WF-2026-041)",
+  "window": {
+    "start": "2026-07-21T14:00:00Z",
+    "end": "2026-07-21T15:00:00Z"
+  },
+  "evidence": [
+    {
+      "id": "E-ALERT-1",
+      "type": "ALERT",
+      "source": "monitoring",
+      "timestamp": "2026-07-21T14:32:00Z",
+      "content": "ALERT wf-job-backlog-high: pending jobs 6,200 (threshold 5,000) on wf-engine-prod."
+    },
+    {
+      "id": "E-MET-1",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-07-21T14:32:00Z",
+      "content": "Pending jobs: 14:00=300, 14:15=1,900, 14:25=4,400, 14:32=6,150. Steady climb. No other metrics were collected for this window (metrics agent restarted at 13:58 and only this series is available)."
+    },
+    {
+      "id": "E-LOG-1",
+      "type": "LOG",
+      "source": "wf-engine",
+      "timestamp": "2026-07-21T14:10:00Z",
+      "content": "INFO SchedulerHeartbeat: engine node wf-engine-prod-2 alive, jobs due=1,420."
+    },
+    {
+      "id": "E-DEP-1",
+      "type": "DEPLOYMENT",
+      "source": "deploy-notes",
+      "timestamp": "2026-07-19T09:00:00Z",
+      "content": "Deploy wf-engine 4.15.0 two days before the incident: dependency upgrades; release notes do not list executor, pool, retry or acquisition changes."
+    },
+    {
+      "id": "E-RB-1",
+      "type": "RUNBOOK",
+      "source": "runbook",
+      "timestamp": "2026-03-01T00:00:00Z",
+      "content": "Runbook RB-WF-07 Job backlog. 1) Confirm backlog growth and compare job creation rate with acquisition rate. 2) Check executor busy vs max threads. 3) Check DB connection pool and slow queries. 4) Check failed-job/retry rates and downstream dependencies. 5) Review recent deployments for pool, retry or acquisition setting changes; a nearby deployment is a clue, not proof. Remediation (restart, rollback, throttling, executor changes) requires a human on-call decision and is out of scope for this assistant."
+    }
+  ]
+}

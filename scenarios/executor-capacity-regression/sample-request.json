@@ -1,0 +1,73 @@
+{
+  "incidentId": "WF-2026-021",
+  "title": "Workflow job backlog after release 4.13.0 (WF-2026-021)",
+  "window": {
+    "start": "2026-04-02T13:00:00Z",
+    "end": "2026-04-02T14:00:00Z"
+  },
+  "evidence": [
+    {
+      "id": "E-ALERT-1",
+      "type": "ALERT",
+      "source": "monitoring",
+      "timestamp": "2026-04-02T13:40:00Z",
+      "content": "ALERT wf-job-backlog-high: pending jobs 9,300 (threshold 5,000). Job acquisition latency p95 2.1s."
+    },
+    {
+      "id": "E-MET-1",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-04-02T13:40:00Z",
+      "content": "Async process starts/min: steady 48-55 from 13:00 to 13:40 (baseline 40-60)."
+    },
+    {
+      "id": "E-MET-2",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-04-02T13:40:00Z",
+      "content": "Pending jobs: 13:00=180, 13:10=190, 13:15=1,100, 13:25=4,800, 13:40=9,200. Growth begins right after 13:12."
+    },
+    {
+      "id": "E-MET-3",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-04-02T13:40:00Z",
+      "content": "Executor threads busy/max: 13:00=11/20, 13:10=12/20, 13:15=4/4, 13:40=4/4 (pinned at max). Jobs acquired/min dropped from 520 to 110 at 13:15."
+    },
+    {
+      "id": "E-MET-4",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-04-02T13:40:00Z",
+      "content": "JVM heap 52-58% flat. DB pool 9/50, query p95 31ms. Failed jobs/min 0-1."
+    },
+    {
+      "id": "E-LOG-1",
+      "type": "LOG",
+      "source": "wf-engine",
+      "timestamp": "2026-04-02T13:15:40Z",
+      "content": "INFO JobExecutor: started with corePoolSize=4 maxPoolSize=4 queueCapacity=3."
+    },
+    {
+      "id": "E-LOG-2",
+      "type": "LOG",
+      "source": "wf-engine",
+      "timestamp": "2026-04-02T13:30:05Z",
+      "content": "WARN JobExecutor: RejectedExecutionHandler invoked, job returned to acquisition queue (count 2,914 in 15 min)."
+    },
+    {
+      "id": "E-DEP-1",
+      "type": "DEPLOYMENT",
+      "source": "deploy-notes",
+      "timestamp": "2026-04-02T13:12:00Z",
+      "content": "Deploy wf-engine 4.13.0 at 13:12 (all pods): config refactor moved executor settings to new properties file; maxPoolSize 20 -> 4 (value copied from dev profile)."
+    },
+    {
+      "id": "E-RB-1",
+      "type": "RUNBOOK",
+      "source": "runbook",
+      "timestamp": "2026-03-01T00:00:00Z",
+      "content": "Runbook RB-WF-07 Job backlog. 1) Confirm backlog growth and compare job creation rate with acquisition rate. 2) Check executor busy vs max threads. 3) Check DB connection pool and slow queries. 4) Check failed-job/retry rates and downstream dependencies. 5) Review recent deployments for pool, retry or acquisition setting changes; a nearby deployment is a clue, not proof. Remediation (restart, rollback, throttling, executor changes) requires a human on-call decision and is out of scope for this assistant."
+    }
+  ]
+}

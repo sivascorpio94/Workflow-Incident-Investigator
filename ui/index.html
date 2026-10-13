@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incident Investigator</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2330; --muted: #5d6879; --line: #dde1e8;
+    --accent: #2f5fd0; --ok: #1f7a4d; --warn: #a15c00; --bad: #b3261e;
+    --alert: #b3261e; --metric: #2f5fd0; --log: #3b7a78; --deployment: #7a3fb0; --runbook: #a15c00;
+    --chip-bg: #eef1f6; --shadow: 0 1px 2px rgba(20,30,50,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161d; --panel: #1b212b; --ink: #e6eaf1; --muted: #9aa5b6; --line: #2b3442;
+      --accent: #7ea2f5; --ok: #5ac28f; --warn: #e0a24a; --bad: #f08a82;
+      --alert: #f08a82; --metric: #7ea2f5; --log: #7fc7c2; --deployment: #c39af0; --runbook: #e0a24a;
+      --chip-bg: #252d3a; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 18px 24px 14px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  .layout { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 20px; padding: 20px 24px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; padding: 16px; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .panel + .panel { margin-top: 16px; }
+  h2 { font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  select, input[type=text], textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+         background: var(--bg); color: var(--ink); font: inherit; }
+  textarea { font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; min-height: 220px; resize: vertical; }
+  details summary { cursor: pointer; color: var(--accent); font-size: 13px; margin-top: 8px; }
+  button { font: inherit; font-weight: 600; padding: 10px 16px; border-radius: 8px; border: 0; background: var(--accent);
+           color: #fff; cursor: pointer; }
+  button:disabled { opacity: .55; cursor: progress; }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); padding: 6px 10px; font-weight: 500; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .backend-line { display: flex; gap: 8px; align-items: center; font-size: 13px; margin: 6px 0; }
+  .evidence { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow: auto; }
+  .evidence li { padding: 7px 8px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 6px; font-size: 13px; transition: background .3s; }
+  .evidence li.flash { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .evidence .head { display: flex; gap: 6px; align-items: center; margin-bottom: 2px; }
+  .evidence .meta { color: var(--muted); font-size: 11px; }
+  .evidence .body { color: var(--ink); overflow-wrap: anywhere; }
+  .tag { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+  .t-ALERT { color: var(--alert); } .t-METRIC { color: var(--metric); } .t-LOG { color: var(--log); }
+  .t-DEPLOYMENT { color: var(--deployment); } .t-RUNBOOK { color: var(--runbook); } .t-UNKNOWN { color: var(--bad); }
+  .chip { display: inline-block; font: 11px ui-monospace, Menlo, monospace; background: var(--chip-bg); border: 1px solid var(--line);
+          border-radius: 6px; padding: 1px 6px; margin: 2px 4px 2px 0; cursor: pointer; }
+  .chip.t-UNKNOWN { border-color: var(--bad); }
+  #results { min-width: 0; }
+  .empty { color: var(--muted); padding: 40px 12px; text-align: center; }
+  .agree { padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; font-weight: 600; border: 1px solid var(--line); background: var(--panel); }
+  .agree.yes { color: var(--ok); } .agree.no { color: var(--bad); }
+  .cols { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+  .col { min-width: 0; }
+  .cols > .panel { margin-top: 0; }
+  .col > h3 { margin: 0 0 8px; font-size: 15px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .col > h3 span { color: var(--muted); font-weight: 400; font-size: 13px; }
+  .sev { font-weight: 700; padding: 2px 10px; border-radius: 999px; color: #fff; font-size: 12px; }
+  .sev.LOW { background: #4b8f5f; } .sev.MEDIUM { background: #b98a1e; } .sev.HIGH { background: #cf6b1e; } .sev.CRITICAL { background: #b3261e; }
+  .pill { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; border: 1px solid currentColor; }
+  .pill.ok { color: var(--ok); } .pill.bad { color: var(--bad); }
+  .bar { height: 8px; background: var(--chip-bg); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
+  .bar > i { display: block; height: 100%; background: var(--accent); }
+  .hyp { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 8px; }
+  .hyp.first { border-color: var(--accent); }
+  .hyp .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 600; }
+  .hyp .cat { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+  .hyp p { margin: 6px 0; font-size: 14px; }
+  .small { font-size: 12px; color: var(--muted); }
+  ul.plain { margin: 6px 0 0; padding-left: 18px; }
+  ul.plain li { margin: 4px 0; font-size: 14px; }
+  .finding { display: flex; gap: 8px; align-items: baseline; margin: 6px 0; font-size: 14px; }
+  .kind-FACT { color: var(--ok); } .kind-HYPOTHESIS { color: var(--warn); }
+  .pipe { display: grid; gap: 6px; margin: 6px 0 2px; }
+  .pipe .stage { display: grid; gap: 6px; }
+  .pipe .stage.par { grid-template-columns: 1fr 1fr; }
+  .step { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 12px; }
+  .step.FAILED { border-color: var(--bad); color: var(--bad); }
+  .step b { font-size: 13px; }
+  .problem { border: 1px solid var(--bad); border-radius: 10px; padding: 12px 14px; color: var(--ink); background: color-mix(in srgb, var(--bad) 8%, transparent); }
+  .problem h4 { margin: 0 0 4px; color: var(--bad); }
+  .running { color: var(--muted); padding: 16px 4px; }
+  .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent);
+          border-radius: 50%; animation: s 0.9s linear infinite; margin-right: 8px; vertical-align: -1px; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  .banner { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Incident Investigator</h1>
+  <p>Read-only multi-agent investigation of a fictional workflow-engine incident. Cites evidence, never remediates.
+     <span id="backendLabel"></span></p>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="panel">
+      <h2>1 &middot; Choose an incident</h2>
+      <label for="scenario">Scenario</label>
+      <select id="scenario"></select>
+      <details>
+        <summary>Request JSON (editable)</summary>
+        <textarea id="req" spellcheck="false"></textarea>
+      </details>
+    </div>
+
+    <div class="panel">
+      <h2>2 &middot; Backends</h2>
+      <div class="backend-line"><input type="checkbox" id="useA" checked disabled> <span id="labelA">This server</span></div>
+      <div class="backend-line"><input type="checkbox" id="useB"> <span>Compare with another backend</span></div>
+      <input type="text" id="urlB" placeholder="http://localhost:8000" aria-label="Second backend URL">
+      <p class="hint">Run the Java service on :8080 and the Python one on :8000, then tick the box to send the same request to both.</p>
+      <div class="row" style="margin-top:12px">
+        <button id="run">Investigate</button>
+        <span id="status" class="hint"></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Evidence submitted</h2>
+      <ul class="evidence" id="evidence"></ul>
+    </div>
+  </aside>
+
+  <section id="results">
+    <div class="empty">Pick a scenario and press <b>Investigate</b>. A full run takes about 30&ndash;40 seconds.</div>
+  </section>
+</div>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+// All model/evidence text goes through textContent - it is untrusted and must never be parsed as HTML.
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+
+let scenarios = [], current = null, edited = false, evidenceById = {};
+let lastResults = null;
+
+function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+async function init() {
+  $("#urlB").value = load("urlB") || "http://localhost:8000";
+  try {
+    const info = await (await fetch("/api/info")).json();
+    $("#labelA").textContent = info.backend;
+    $("#backendLabel").textContent = "· " + info.backend;
+  } catch (e) { $("#labelA").textContent = "This server"; }
+  try {
+    scenarios = await (await fetch("/api/scenarios")).json();
+  } catch (e) {
+    $("#results").replaceChildren(el("div", "problem", "Could not load scenarios from this server."));
+    return;
+  }
+  const sel = $("#scenario");
+  scenarios.forEach(s => { const o = el("option", null, s.name); o.value = s.name; sel.append(o); });
+  sel.addEventListener("change", () => select(sel.value));
+  $("#req").addEventListener("input", () => { edited = true; try { renderEvidence(JSON.parse($("#req").value)); } catch (e) {} });
+  $("#run").addEventListener("click", run);
+  $("#urlB").addEventListener("input", () => { store("urlB", $("#urlB").value); $("#useB").checked = true; });
+  select(scenarios[0].name);
+}
+
+function select(name) {
+  current = scenarios.find(s => s.name === name);
+  edited = false;
+  $("#req").value = JSON.stringify(current.request, null, 2);
+  renderEvidence(current.request);
+}
+
+function renderEvidence(req) {
+  evidenceById = {};
+  const ul = $("#evidence"); ul.replaceChildren();
+  (req.evidence || []).forEach(e => {
+    evidenceById[e.id] = e;
+    const li = el("li"); li.id = "ev-" + e.id;
+    const head = el("div", "head");
+    head.append(el("span", "tag t-" + e.type, e.type), el("b", null, e.id));
+    li.append(head, el("div", "meta", (e.source || "") + " · " + (e.timestamp || "")), el("div", "body", e.content));
+    ul.append(li);
+  });
+}
+
+function chip(id) {
+  const e = evidenceById[id];
+  const c = el("span", "chip t-" + (e ? e.type : "UNKNOWN"), id);
+  c.title = e ? e.type + ": " + e.content : "Not in the submitted evidence";
+  c.addEventListener("click", () => {
+    const li = document.getElementById("ev-" + id);
+    if (!li) return;
+    li.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    li.classList.add("flash"); setTimeout(() => li.classList.remove("flash"), 1400);
+  });
+  return c;
+}
+const chips = ids => { const s = el("div"); (ids || []).forEach(i => s.append(chip(i))); return s; };
+const pct = x => Math.round((x || 0) * 100) + "%";
+const bar = x => { const b = el("div", "bar"); const i = el("i"); i.style.width = pct(x); b.append(i); return b; };
+
+async function call(base, req) {
+  const t0 = performance.now();
+  try {
+    const r = await fetch(base + "/api/incidents/investigate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(req) });
+    const body = await r.json().catch(() => null);
+    const ms = performance.now() - t0;
+    return r.ok ? { ok: true, data: body, ms } : { ok: false, status: r.status, problem: body, ms };
+  } catch (e) {
+    return { ok: false, status: 0, network: true, ms: performance.now() - t0 };
+  }
+}
+
+async function run() {
+  let req;
+  try { req = JSON.parse($("#req").value); } catch (e) { $("#status").textContent = "The request JSON is not valid."; return; }
+  const targets = [{ base: "", label: $("#labelA").textContent }];
+  if ($("#useB").checked && $("#urlB").value.trim()) {
+    const base = $("#urlB").value.trim().replace(/\/+$/, "");
+    let label = base;
+    try { label = (await (await fetch(base + "/api/info")).json()).backend; } catch (e) {}
+    targets.push({ base, label });
+  }
+  $("#run").disabled = true; $("#status").textContent = "";
+  const results = $("#results"); results.replaceChildren();
+  const cols = el("div", "cols"); results.append(cols);
+  const t0 = performance.now();
+  const colEls = targets.map(t => {
+    const col = el("div", "col panel");
+    const h = el("h3"); h.append(el("b", null, t.label)); const timer = el("span", null, "running…"); h.append(timer);
+    const body = el("div", "running"); body.append(el("span", "spin"), document.createTextNode("Triage, analysts and verifier are working…"));
+    col.append(h, body); cols.append(col);
+    return { col, timer, body };
+  });
+  const tick = setInterval(() => colEls.forEach(c => { if (c.pending !== false) c.timer.textContent = Math.round((performance.now() - t0) / 1000) + "s"; }), 500);
+
+  const outcomes = await Promise.all(targets.map((t, i) => call(t.base, req).then(o => {
+    colEls[i].pending = false; colEls[i].timer.textContent = (o.ms / 1000).toFixed(1) + " s total";
+    renderOutcome(colEls[i].body, o, t); return o; })));
+  clearInterval(tick);
+  lastResults = outcomes;
+
+  if (targets.length > 1) {
+    const tops = outcomes.map(o => o.ok ? o.data.assessment.hypotheses[0]?.category : null);
+    const note = el("div", "agree");
+    if (tops.every(Boolean) && tops[0] === tops[1]) { note.classList.add("yes"); note.textContent = "✓ Both backends agree on the diagnosis: " + tops[0]; }
+    else { note.classList.add("no"); note.textContent = "✗ Backends differ or one failed: " + tops.map(t => t || "error").join(" vs ") ; }
+    results.insertBefore(note, cols);
+  }
+  if (current && !edited) {
+    const reveal = el("button", "ghost", "Reveal expected answer");
+    const out = el("div", "banner");
+    reveal.addEventListener("click", () => {
+      const tops = (lastResults || []).map(o => o.ok ? o.data.assessment.hypotheses[0]?.category : null);
+      const ok = tops.length && tops.every(t => t === current.expected.rootCause);
+      out.textContent = "Expected: " + current.expected.rootCause + (ok ? " ✓ matched. " : " ✗ not matched. ") + current.expected.notes;
+      reveal.remove();
+    });
+    results.append(el("div", null), reveal, out);
+  }
+  $("#run").disabled = false;
+}
+
+function renderOutcome(host, o, target) {
+  host.className = ""; host.replaceChildren();
+  if (!o.ok) {
+    const p = el("div", "problem");
+    if (o.network) {
+      p.append(el("h4", null, "Could not reach " + (target.base || "this server")),
+               el("div", null, "Is it running? Cross-origin calls are only allowed between localhost addresses."));
+    } else {
+      const pr = o.problem || {};
+      const hint = { 400: "The request was rejected before any model call.", 422: "The model answered, but the answer broke an application rule and was rejected.",
+                     502: "The model provider call failed." }[o.status] || "";
+      p.append(el("h4", null, "HTTP " + o.status + " · " + (pr.detail || pr.title || "Request failed")), el("div", null, hint));
+      if ((pr.violations || []).length) { const ul = el("ul", "plain"); pr.violations.forEach(v => ul.append(el("li", null, v))); p.append(ul); }
+      if (pr.investigationId) p.append(el("div", "small", "Investigation " + pr.investigationId));
+    }
+    host.append(p); return;
+  }
+  const { assessment: a, trace } = o.data;
+
+  // headline
+  const top = el("div", "row");
+  top.append(el("span", "sev " + a.severity, a.severity));
+  top.append(el("b", null, "Confidence " + pct(a.confidence)));
+  top.append(el("span", "pill " + (a.remediationExecuted ? "bad" : "ok"), a.remediationExecuted ? "Remediation executed" : "No remediation executed"));
+  host.append(top, bar(a.confidence), el("p", null, a.summary));
+
+  // hypotheses
+  host.append(el("h2", null, "Hypotheses (best supported first)"));
+  a.hypotheses.forEach((h, i) => {
+    const box = el("div", "hyp" + (i === 0 ? " first" : ""));
+    const t = el("div", "top");
+    t.append(el("span", "cat", (i === 0 ? "Diagnosis · " : "") + h.category), el("span", null, pct(h.confidence)));
+    box.append(t, bar(h.confidence), el("p", null, h.description));
+    if (h.supportingEvidenceIds.length) box.append(el("div", "small", "Supporting"), chips(h.supportingEvidenceIds));
+    if (h.contradictingEvidenceIds.length) box.append(el("div", "small", "Contradicting"), chips(h.contradictingEvidenceIds));
+    host.append(box);
+  });
+
+  // findings
+  host.append(el("h2", null, "Findings"));
+  a.findings.forEach(f => {
+    const row = el("div", "finding");
+    row.append(el("span", "tag kind-" + f.kind, f.kind));
+    const body = el("div"); body.append(el("div", null, f.claim), chips(f.evidenceIds)); row.append(body);
+    host.append(row);
+  });
+
+  if (a.unknowns.length) { host.append(el("h2", null, "Unknowns")); const ul = el("ul", "plain"); a.unknowns.forEach(u => ul.append(el("li", null, u))); host.append(ul); }
+  if (a.recommendations.length) {
+    host.append(el("h2", null, "Recommended next steps (read-only)"));
+    const ul = el("ul", "plain");
+    a.recommendations.forEach(r => {
+      const li = el("li"); li.append(el("b", null, r.action + " "), el("span", "tag " + (r.readOnly ? "kind-FACT" : "t-UNKNOWN"), r.readOnly ? "read-only" : "NOT read-only"),
+                                    el("div", "small", r.rationale)); ul.append(li);
+    });
+    host.append(ul);
+  }
+
+  // pipeline timing
+  host.append(el("h2", null, "How it ran"));
+  const by = Object.fromEntries(trace.steps.map(s => [s.name, s]));
+  const box = (name) => {
+    const s = by[name]; const d = el("div", "step" + (s && s.outcome === "FAILED" ? " FAILED" : ""));
+    if (!s) { d.append(el("b", null, name), el("div", "small", "not run")); return d; }
+    d.append(el("b", null, name), el("div", null, s.durationMs + " ms" + (s.promptTokens != null ? " · " + s.promptTokens + " in / " + s.completionTokens + " out tokens" : "")));
+    return d;
+  };
+  const pipe = el("div", "pipe");
+  [["validate-request"], ["triage"], ["runtime-analyst", "change-analyst"], ["verifier"], ["validate"]].forEach(group => {
+    const st = el("div", "stage" + (group.length > 1 ? " par" : "")); group.forEach(n => st.append(box(n))); pipe.append(st);
+  });
+  host.append(pipe, el("div", "small", "The two analysts run in parallel. Investigation " + trace.investigationId));
+}
+
+init();
+</script>
+</body>
+</html>
