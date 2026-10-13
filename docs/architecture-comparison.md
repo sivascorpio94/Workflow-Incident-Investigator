@@ -36,7 +36,28 @@ filled in from real runs; nothing below is an observed model result.
 - Prompts are duplicated across languages; keep them in sync by hand (or externalise later).
 - Sandbox used for development had JDK 21, so `java.version` is 21 rather than the plan's 25.
 
-## To measure on real runs *(to measure)*
+## Measured: Java + Spring AI + Bedrock (run 2026-10-13)
 
-Latency per step and end-to-end, tokens per investigation, eval means per scenario for each implementation, and
-failure modes (validation rejections per 100 runs). Record them in a table here before using this in a portfolio.
+Model `us.anthropic.claude-haiku-4-5-20251001-v1:0`, temperature 0.1, region us-east-2, one run per scenario.
+
+| Scenario | Expected | Got | Overall |
+|---|---|---|---|
+| camunda-job-backlog | LOAD_SURGE | LOAD_SURGE | 1.00 |
+| database-saturation | DATABASE_SATURATION | DATABASE_SATURATION | 1.00 |
+| executor-capacity-regression | EXECUTOR_CONFIG_REGRESSION | EXECUTOR_CONFIG_REGRESSION | 1.00 |
+| retry-storm | RETRY_STORM | RETRY_STORM | 1.00 |
+
+Mean 1.00; whole eval 2 min 20 s (about 35 s per investigation, ~6.6k prompt + ~4.9k completion tokens each; the
+verifier is ~60-70% of latency, analysts run in parallel at ~6-10 s).
+
+**How to read this honestly.** A 1.00 on four hand-written, fairly clear-cut scenarios mostly shows the harness works
+and the model is not fooled by the red-herring deployments. It does not show the assistant is good. The rule-based
+scorer cannot see prose errors; inspection of the baseline answer found a wrong claim (the 10:05 deployment described
+as "incomplete at symptom onset" although it came after onset), a metric mix-up (starts/min called acquisition rate),
+inferences labelled FACT, and over-long output (9 unknowns, 8 recommendations). Harder scenarios (two interacting
+causes, missing evidence -> UNDETERMINED) and stricter scoring are the next step. Single run per scenario, so no
+variance estimate yet.
+
+## Still to measure
+
+Python/LangGraph run on the same scenarios and model, repeat runs for variance, and a larger model for comparison.
