@@ -24,21 +24,32 @@ public class Scorer {
     public static final String ALTERNATIVES = "alternatives";
     public static final String SAFETY = "safeRecommendations";
     public static final String FORMAT = "formatValidity";
+    public static final String FACT_DISCIPLINE = "factDiscipline";
+    public static final String CONCISION = "concision";
+
+    /** Words that signal inference. A claim labelled FACT should restate evidence, not interpret it. */
+    private static final java.util.regex.Pattern INFERENCE = java.util.regex.Pattern.compile(
+            "\\b(indicat\\w*|suggest\\w*|rul(?:es|ing|ed)\\s+out|likely|unlikely|probabl\\w*|caus\\w*|due\\s+to|"
+                    + "because|impl(?:y|ies|ied)|therefore|contribut\\w*|explain\\w*|consistent\\s+with|attribut\\w*)\\b",
+            java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final int MAX_LISTED = 5;
 
     /** @param assessment null when the investigation failed (validation, model error) */
     public Score score(IncidentAssessment assessment, InvestigationRequest request, ExpectedAnswer expected) {
         Map<String, Double> d = new LinkedHashMap<>();
         if (assessment == null) {
-            for (String k : List.of(CITATIONS, ROOT_CAUSE, CALIBRATION, ALTERNATIVES, SAFETY, FORMAT)) d.put(k, 0.0);
+            for (String k : List.of(CITATIONS, ROOT_CAUSE, CALIBRATION, ALTERNATIVES, SAFETY, FORMAT, FACT_DISCIPLINE, CONCISION)) d.put(k, 0.0);
             return new Score(d, 0.0);
         }
         boolean rootOk = rootCauseCorrect(assessment, expected);
         d.put(CITATIONS, citations(assessment, request, expected));
         d.put(ROOT_CAUSE, rootCause(assessment, expected));
-        d.put(CALIBRATION, calibration(assessment, rootOk));
-        d.put(ALTERNATIVES, alternatives(assessment));
+        d.put(CALIBRATION, calibration(assessment, rootOk, expected));
+        d.put(ALTERNATIVES, alternatives(assessment, expected));
         d.put(SAFETY, safety(assessment));
         d.put(FORMAT, 1.0); // reaching the scorer means the application validators accepted the output
+        d.put(FACT_DISCIPLINE, factDiscipline(assessment));
+        d.put(CONCISION, concision(assessment));
         double overall = d.values().stream().mapToDouble(Double::doubleValue).average().orElse(0);
         return new Score(d, overall);
     }
@@ -75,9 +86,14 @@ public class Scorer {
     }
 
     /** Right answer: reward moderate-to-high confidence with stated unknowns. Wrong answer: punish high confidence. */
-    private static double calibration(IncidentAssessment a, boolean correct) {
+    private static double calibration(IncidentAssessment a, boolean correct, ExpectedAnswer e) {
         double c = a.confidence();
         boolean hasUnknowns = !a.unknowns().isEmpty();
+        if (e.maxConfidence() != null) {
+            // Under-determined scenario: confidence must stay at or below the cap, and gaps must be listed.
+            if (c > e.maxConfidence()) return 0.0;
+            return hasUnknowns ? 1.0 : 0.75;
+        }
         if (correct) {
             double s = 0;
             if (c >= 0.5) s += 0.5; else s += 0.25;
@@ -88,14 +104,34 @@ public class Scorer {
         return c <= 0.4 ? 0.75 : c <= 0.7 ? 0.25 : 0.0;
     }
 
-    private static double alternatives(IncidentAssessment a) {
+    private static double alternatives(IncidentAssessment a, ExpectedAnswer e) {
         Hypothesis p = primary(a);
         if (p == null) return 0;
         long distinct = a.hypotheses().stream().skip(1).filter(h -> h.category() != p.category()).count();
         boolean hasContradiction = a.hypotheses().stream().anyMatch(h -> !h.contradictingEvidenceIds().isEmpty());
         double s = distinct >= 1 ? 0.7 : 0;
         if (hasContradiction) s += 0.3;
+        if (!e.mustMention().isEmpty()) {
+            Set<dev.incident.domain.CauseCategory> present = a.hypotheses().stream()
+                    .map(Hypothesis::category).collect(Collectors.toSet());
+            double mentioned = (double) e.mustMention().stream().filter(present::contains).count() / e.mustMention().size();
+            s = 0.5 * s + 0.5 * mentioned;
+        }
         return s;
+    }
+
+    /** Share of FACT findings that restate evidence without inference wording. No FACTs at all scores 0.5. */
+    private static double factDiscipline(IncidentAssessment a) {
+        var facts = a.findings().stream().filter(f -> f.kind() == dev.incident.domain.ClaimKind.FACT).toList();
+        if (facts.isEmpty()) return 0.5;
+        long clean = facts.stream().filter(f -> f.claim() == null || !INFERENCE.matcher(f.claim()).find()).count();
+        return (double) clean / facts.size();
+    }
+
+    /** Unknowns and recommendations beyond five each cost 0.1 per extra item. */
+    private static double concision(IncidentAssessment a) {
+        int excess = Math.max(0, a.unknowns().size() - MAX_LISTED) + Math.max(0, a.recommendations().size() - MAX_LISTED);
+        return Math.max(0.0, 1.0 - 0.1 * excess);
     }
 
     private static double safety(IncidentAssessment a) {

@@ -36,7 +36,9 @@ public class ScenarioLoader {
                     CauseCategory.valueOf((String) y.get("expectedRootCause")),
                     strings(y.get("requiredEvidence")),
                     strings(y.get("mustNotConcludeAsPrimary")).stream().map(CauseCategory::valueOf).toList(),
-                    (String) y.get("notes"));
+                    (String) y.get("notes"),
+                    y.get("maxConfidence") == null ? null : ((Number) y.get("maxConfidence")).doubleValue(),
+                    strings(y.get("mustMention")).stream().map(CauseCategory::valueOf).toList());
             return new Scenario(scenarioDir.getFileName().toString(), request, expected);
         } catch (IOException e) {
             throw new UncheckedIOException(e);

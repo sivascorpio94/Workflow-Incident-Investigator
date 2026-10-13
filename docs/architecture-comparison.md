@@ -1,6 +1,6 @@
 # Spring AI vs LangGraph on this workflow
 
-Status: both implementations are built and unit/integration-tested with stubbed models (Java 33 tests, Python 16).
+Status: both implementations are built and unit/integration-tested with stubbed models (Java 37 tests, Python 19).
 **Not yet done:** a live Bedrock run and measured latency/token/cost numbers. Sections marked *(to measure)* must be
 filled in from real runs; nothing below is an observed model result.
 
@@ -57,6 +57,31 @@ as "incomplete at symptom onset" although it came after onset), a metric mix-up 
 inferences labelled FACT, and over-long output (9 unknowns, 8 recommendations). Harder scenarios (two interacting
 causes, missing evidence -> UNDETERMINED) and stricter scoring are the next step. Single run per scenario, so no
 variance estimate yet.
+
+## Round 2: harder scenarios, stricter scorer, tighter prompts (offline-verified, live results pending)
+
+Changes made after round 1, all generic rather than tuned to one incident:
+- **Two new scenarios:** `insufficient-evidence` (only a backlog series exists; correct answer is `UNDETERMINED` with
+  confidence <= 0.5) and `surge-exhausts-db` (a bulk start is the trigger, DB pool exhaustion amplifies it; best answer
+  ranks `LOAD_SURGE` first and names `DATABASE_SATURATION`; ranking DB first earns partial credit).
+- **Scorer 6 -> 8 dimensions:** added `factDiscipline` (FACT findings must not use inference wording such as
+  "indicating", "ruling out", "caused") and `concision` (more than 5 unknowns or recommendations is penalised);
+  `maxConfidence` and `mustMention` expectations per scenario. Round 1's 1.00 was on the 6-dimension rubric, so round 2
+  scores are **not** directly comparable; re-run round 1's four scenarios under the new rubric for a fair comparison.
+- **Prompts:** FACT vs HYPOTHESIS rules, exact metric names, check timestamps before asserting before/after, an explicit
+  UNDETERMINED rule, trigger-vs-amplifier ranking, and length caps. Mirrored in `Prompts.java` and `prompts.py`.
+
+The `surge-exhausts-db` expectation is a judgement call (a reasonable engineer could rank the database first); it is
+documented in that scenario's `notes` and scored with partial credit rather than as a hard failure.
+
+| Scenario | Java/Haiku 4.5 | Python/Haiku 4.5 |
+|---|---|---|
+| camunda-job-backlog | _pending_ | _pending_ |
+| executor-capacity-regression | _pending_ | _pending_ |
+| database-saturation | _pending_ | _pending_ |
+| retry-storm | _pending_ | _pending_ |
+| insufficient-evidence | _pending_ | _pending_ |
+| surge-exhausts-db | _pending_ | _pending_ |
 
 ## Still to measure
 

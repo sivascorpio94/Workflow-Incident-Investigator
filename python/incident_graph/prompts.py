@@ -11,6 +11,14 @@ Cite evidence only by the exact ids given in square brackets. Never invent ids, 
 Separate facts (directly stated in cited evidence) from hypotheses (inferences). Timing alone is a clue,
 not proof of causation: check whether symptoms started before or after a change, and whether the change
 could plausibly produce the symptom. Respond only with the requested structure.
+
+Rules for claims:
+- kind=FACT only restates what a cited evidence item says (values, times, names). Anything you infer,
+  interpret, rule in or out, or attribute to a cause is kind=HYPOTHESIS, never FACT.
+- Use metric names exactly as the evidence does. Do not treat different metrics as the same thing
+  (for example work creation/start rate versus work acquisition/processing rate).
+- When you mention a change or event relative to symptom onset, compare the actual timestamps and say
+  whether it came before or after; never assert an ordering you have not checked.
 """
 
 TRIAGE = COMMON + """
@@ -43,6 +51,15 @@ confidence in [0,1]; keep confidence moderate when evidence is indirect, and lis
 one alternative hypothesis and say why it ranks lower. Recommendations are next steps for a human, must all
 be read-only investigative steps (readOnly=true), and must not say anything was already done.
 Always set remediationExecuted=false. severity is LOW, MEDIUM, HIGH or CRITICAL. Echo the incidentId.
+
+If the evidence cannot separate the candidate causes (key signals missing, such as no creation rate,
+executor, database or failure data), make the first hypothesis UNDETERMINED, keep every confidence at or
+below 0.5, and list the missing evidence as unknowns and read-only next steps. Do not guess a cause.
+When one cause triggers another (for example a surge exhausting a shared resource), rank the trigger first
+and list the consequence as a separate hypothesis that amplifies it.
+
+Be concise: at most 5 unknowns, at most 5 recommendations, at most 8 findings, and at most three
+sentences per description or summary.
 """
 
 

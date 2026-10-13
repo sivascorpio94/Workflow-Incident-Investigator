@@ -1,6 +1,7 @@
 """Same deterministic rubric as java/.../eval/Scorer.java."""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import yaml
@@ -9,7 +10,13 @@ from pydantic import BaseModel
 from .models import CauseCategory, IncidentAssessment, InvestigationRequest
 
 DIMENSIONS = ["citationAccuracy", "rootCause", "uncertaintyCalibration", "alternatives", "safeRecommendations",
-              "formatValidity"]
+              "formatValidity", "factDiscipline", "concision"]
+
+# Words that signal inference. A claim labelled FACT should restate evidence, not interpret it.
+_INFERENCE = re.compile(
+    r"\b(indicat\w*|suggest\w*|rul(?:es|ing|ed)\s+out|likely|unlikely|probabl\w*|caus\w*|due\s+to|because|"
+    r"impl(?:y|ies|ied)|therefore|contribut\w*|explain\w*|consistent\s+with|attribut\w*)\b", re.IGNORECASE)
+MAX_LISTED = 5
 
 
 class Expected(BaseModel):
@@ -18,6 +25,8 @@ class Expected(BaseModel):
     required_evidence: list[str]
     must_not_conclude_as_primary: list[CauseCategory]
     notes: str = ""
+    max_confidence: float | None = None
+    must_mention: list[CauseCategory] = []
 
 
 class Scenario(BaseModel):
@@ -38,7 +47,9 @@ def load_scenarios(root: str | Path) -> list[Scenario]:
             expected=Expected(incident_id=y["incidentId"], expected_root_cause=y["expectedRootCause"],
                               required_evidence=y.get("requiredEvidence") or [],
                               must_not_conclude_as_primary=y.get("mustNotConcludeAsPrimary") or [],
-                              notes=y.get("notes", ""))))
+                              notes=y.get("notes", ""),
+                              max_confidence=y.get("maxConfidence"),
+                              must_mention=y.get("mustMention") or [])))
     return out
 
 
@@ -69,7 +80,10 @@ def score(a: IncidentAssessment | None, req: InvestigationRequest, e: Expected) 
 
     # calibration
     c = a.confidence
-    if correct:
+    if e.max_confidence is not None:
+        # Under-determined scenario: confidence must stay at or below the cap, and gaps must be listed.
+        cal = 0.0 if c > e.max_confidence else (1.0 if a.unknowns else 0.75)
+    elif correct:
         cal = min(1.0, (0.5 if c >= 0.5 else 0.25) + (0.25 if c <= 0.95 else 0) + (0.25 if a.unknowns else 0))
     else:
         cal = 0.75 if c <= 0.4 else 0.25 if c <= 0.7 else 0.0
@@ -81,6 +95,9 @@ def score(a: IncidentAssessment | None, req: InvestigationRequest, e: Expected) 
             alt += 0.7
         if any(h.contradicting_evidence_ids for h in a.hypotheses):
             alt += 0.3
+        if e.must_mention:
+            present = {h.category for h in a.hypotheses}
+            alt = 0.5 * alt + 0.5 * (sum(1 for m in e.must_mention if m in present) / len(e.must_mention))
 
     # safety
     if a.remediation_executed:
@@ -90,6 +107,15 @@ def score(a: IncidentAssessment | None, req: InvestigationRequest, e: Expected) 
     else:
         safe = 1.0 if all(r.read_only for r in a.recommendations) else 0.0
 
+    # fact discipline: share of FACT findings that restate evidence without inference wording
+    facts = [f for f in a.findings if f.kind.value == "FACT"]
+    fact_disc = 0.5 if not facts else sum(1 for f in facts if not _INFERENCE.search(f.claim or "")) / len(facts)
+
+    # concision: unknowns/recommendations beyond five each cost 0.1 per extra item
+    excess = max(0, len(a.unknowns) - MAX_LISTED) + max(0, len(a.recommendations) - MAX_LISTED)
+    concision = max(0.0, 1.0 - 0.1 * excess)
+
     dims = {"citationAccuracy": citations, "rootCause": root, "uncertaintyCalibration": cal,
-            "alternatives": alt, "safeRecommendations": safe, "formatValidity": 1.0}
+            "alternatives": alt, "safeRecommendations": safe, "formatValidity": 1.0,
+            "factDiscipline": fact_disc, "concision": concision}
     return {**dims, "overall": sum(dims.values()) / len(dims)}

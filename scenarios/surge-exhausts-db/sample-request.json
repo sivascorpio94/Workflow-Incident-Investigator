@@ -1,0 +1,73 @@
+{
+  "incidentId": "WF-2026-052",
+  "title": "Workflow backlog with exhausted DB pool after bulk start (WF-2026-052)",
+  "window": {
+    "start": "2026-08-14T11:00:00Z",
+    "end": "2026-08-14T12:00:00Z"
+  },
+  "evidence": [
+    {
+      "id": "E-ALERT-1",
+      "type": "ALERT",
+      "source": "monitoring",
+      "timestamp": "2026-08-14T11:30:00Z",
+      "content": "ALERT wf-job-backlog-high: pending jobs 12,700. ALERT db-connection-pool-exhausted wf-engine-prod (50/50)."
+    },
+    {
+      "id": "E-MET-1",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-08-14T11:30:00Z",
+      "content": "Async process starts/min: 11:00=48, 11:05=52, 11:08=390, 11:15=410, 11:30=405. Baseline 45-55/min."
+    },
+    {
+      "id": "E-MET-2",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-08-14T11:30:00Z",
+      "content": "Pending jobs: 11:00=250, 11:10=2,200, 11:20=7,000, 11:30=12,600."
+    },
+    {
+      "id": "E-MET-3",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-08-14T11:30:00Z",
+      "content": "DB connection pool in use: 11:00=21/50, 11:08=33/50, 11:14=50/50, 11:30=50/50. DB query p95: 11:00=35ms, 11:14=1.9s, 11:30=3.1s. DB CPU 92% from 11:14."
+    },
+    {
+      "id": "E-MET-4",
+      "type": "METRIC",
+      "source": "metrics",
+      "timestamp": "2026-08-14T11:30:00Z",
+      "content": "Executor threads busy/max: 11:00=12/20, 11:10=20/20, 11:30=20/20; ~15 of the 20 threads WAITING for a DB connection from 11:14. Max pool unchanged at 20."
+    },
+    {
+      "id": "E-LOG-1",
+      "type": "LOG",
+      "source": "wf-engine",
+      "timestamp": "2026-08-14T11:08:20Z",
+      "content": "INFO ProcessStartService: bulk start request from partner-sync, 15000 async instances queued."
+    },
+    {
+      "id": "E-LOG-2",
+      "type": "LOG",
+      "source": "wf-engine",
+      "timestamp": "2026-08-14T11:16:00Z",
+      "content": "WARN HikariPool-1: Connection is not available, request timed out after 30000ms (x300 in 10 min)."
+    },
+    {
+      "id": "E-DEP-1",
+      "type": "DEPLOYMENT",
+      "source": "deploy-notes",
+      "timestamp": "2026-08-14T08:30:00Z",
+      "content": "Deploy wf-engine 4.15.2 at 08:30: logging format change only. No executor, pool or retry changes."
+    },
+    {
+      "id": "E-RB-1",
+      "type": "RUNBOOK",
+      "source": "runbook",
+      "timestamp": "2026-03-01T00:00:00Z",
+      "content": "Runbook RB-WF-07 Job backlog. 1) Confirm backlog growth and compare job creation rate with acquisition rate. 2) Check executor busy vs max threads. 3) Check DB connection pool and slow queries. 4) Check failed-job/retry rates and downstream dependencies. 5) Review recent deployments for pool, retry or acquisition setting changes; a nearby deployment is a clue, not proof. Remediation (restart, rollback, throttling, executor changes) requires a human on-call decision and is out of scope for this assistant."
+    }
+  ]
+}

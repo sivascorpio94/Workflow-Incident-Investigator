@@ -18,7 +18,7 @@ request -> validate -> triage -> runtime analyst ‖ change analyst -> verifier 
 ```
 
 Contract shared by both: [`contracts/investigation-contract.md`](contracts/investigation-contract.md).
-Scenarios (4, with expected answers kept in separate `incident.yaml` files that are never sent to the model):
+Scenarios (6, with expected answers kept in separate `incident.yaml` files that are never sent to the model):
 [`scenarios/`](scenarios). Design comparison and findings: [`docs/architecture-comparison.md`](docs/architecture-comparison.md).
 
 Using a separate Bedrock profile/policy/cost tag for this project: [`docs/bedrock-setup.md`](docs/bedrock-setup.md).
@@ -29,7 +29,7 @@ Needs a JDK (21+; the plan's Java 25 works - change `java.version` in `pom.xml`)
 
 ```bash
 cd java
-mvn test                                  # 33 deterministic tests, no AWS needed
+mvn test                                  # 37 deterministic tests, no AWS needed
 export AWS_REGION=us-east-2               # credentials via AWS CLI profile / env vars; never commit them
 export BEDROCK_MODEL_ID=<chat model or inference profile enabled in your account>
 mvn spring-boot:run
@@ -43,7 +43,7 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--incident.eval.enabled=true --
 
 ```bash
 cd python && python -m venv .venv && . .venv/bin/activate && pip install -e '.[dev]'
-pytest                                    # 16 deterministic tests, no AWS/LangSmith needed
+pytest                                    # 19 deterministic tests, no AWS/LangSmith needed
 export AWS_REGION=us-east-2 BEDROCK_MODEL_ID=<same model>
 export LANGSMITH_TRACING=true LANGSMITH_API_KEY=<key> LANGSMITH_PROJECT=incident-investigator   # optional
 python -m incident_graph investigate ../scenarios/camunda-job-backlog/sample-request.json

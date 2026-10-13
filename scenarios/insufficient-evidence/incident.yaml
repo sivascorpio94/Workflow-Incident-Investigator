@@ -1,0 +1,7 @@
+# Expected answer - used ONLY by evaluation. Never sent to the live investigation.
+incidentId: WF-2026-041
+expectedRootCause: UNDETERMINED
+requiredEvidence: [E-ALERT-1, E-MET-1]
+mustNotConcludeAsPrimary: [LOAD_SURGE, EXECUTOR_CONFIG_REGRESSION, DATABASE_SATURATION, RETRY_STORM]
+notes: "Only the backlog series exists: no creation rate, executor, DB, failure or log evidence. The honest answer is UNDETERMINED with low confidence and a list of what to collect."
+maxConfidence: 0.5

@@ -129,8 +129,9 @@ def test_scenarios_are_valid_distinct_and_do_not_leak_answers():
     from incident_graph.validation import validate_request
     scenarios = load_scenarios(SCEN)
     assert {s.name for s in scenarios} == {"camunda-job-backlog", "executor-capacity-regression",
-                                           "database-saturation", "retry-storm"}
-    assert len({s.expected.expected_root_cause for s in scenarios}) == 4
+                                           "database-saturation", "retry-storm", "insufficient-evidence",
+                                           "surge-exhausts-db"}
+    assert len({s.expected.expected_root_cause for s in scenarios}) == 5
     for s in scenarios:
         validate_request(s.request)
         ids = {e.id for e in s.request.evidence}
@@ -149,6 +150,54 @@ def test_scoring_rubric():
     t = score(trap, s.request, s.expected)
     assert t["rootCause"] == 0.0 and t["uncertaintyCalibration"] == 0.0 and t["overall"] < 0.6
     assert score(None, s.request, s.expected)["overall"] == 0.0
+
+
+def _scenario(name):
+    return next(x for x in load_scenarios(SCEN) if x.name == name)
+
+
+def test_fact_discipline_and_concision_penalise_sloppy_answers():
+    s = _scenario("camunda-job-backlog")
+    sloppy = good_assessment(
+        findings=[Finding(claim="DB is fine, ruling out database contention", kind=ClaimKind.FACT, evidence_ids=["E-MET-4"]),
+                  Finding(claim="Pool was saturated indicating a bottleneck", kind=ClaimKind.FACT, evidence_ids=["E-MET-3"]),
+                  Finding(claim="Starts rose to 400/min", kind=ClaimKind.FACT, evidence_ids=["E-MET-1"])],
+        unknowns=[f"q{i}" for i in range(9)],
+        recommendations=[Recommendation(action=f"a{i}", rationale="r", read_only=True) for i in range(8)])
+    r = score(sloppy, s.request, s.expected)
+    assert abs(r["factDiscipline"] - 1 / 3) < 1e-9
+    assert abs(r["concision"] - 0.3) < 1e-9
+    assert score(good_assessment(), s.request, s.expected)["factDiscipline"] == 1.0
+
+
+def test_undetermined_scenario_rewards_low_confidence_and_punishes_a_guess():
+    s = _scenario("insufficient-evidence")
+    honest = good_assessment(confidence=0.3, hypotheses=[
+        Hypothesis(category=CauseCategory.UNDETERMINED, description="not enough evidence", confidence=0.3,
+                   supporting_evidence_ids=["E-MET-1"]),
+        Hypothesis(category=CauseCategory.LOAD_SURGE, description="possible", confidence=0.2,
+                   contradicting_evidence_ids=["E-LOG-1"])],
+        findings=[Finding(claim="Pending jobs 6,150 at 14:32", kind=ClaimKind.FACT, evidence_ids=["E-MET-1", "E-ALERT-1"])])
+    h = score(honest, s.request, s.expected)
+    assert h["rootCause"] == 1.0 and h["uncertaintyCalibration"] == 1.0
+    guess = good_assessment(confidence=0.85)  # confidently says LOAD_SURGE
+    g = score(guess, s.request, s.expected)
+    assert g["rootCause"] == 0.0 and g["uncertaintyCalibration"] == 0.0
+
+
+def test_must_mention_rewards_naming_the_amplifier():
+    s = _scenario("surge-exhausts-db")
+    both = good_assessment(hypotheses=[
+        Hypothesis(category=CauseCategory.LOAD_SURGE, description="trigger", confidence=0.7,
+                   supporting_evidence_ids=["E-LOG-1", "E-MET-1", "E-MET-3"], contradicting_evidence_ids=["E-DEP-1"]),
+        Hypothesis(category=CauseCategory.DATABASE_SATURATION, description="amplifier", confidence=0.6,
+                   supporting_evidence_ids=["E-MET-3"])])
+    only = good_assessment(hypotheses=[
+        Hypothesis(category=CauseCategory.LOAD_SURGE, description="trigger", confidence=0.7,
+                   supporting_evidence_ids=["E-LOG-1", "E-MET-1", "E-MET-3"], contradicting_evidence_ids=["E-DEP-1"]),
+        Hypothesis(category=CauseCategory.RETRY_STORM, description="other", confidence=0.1)])
+    assert score(both, s.request, s.expected)["alternatives"] == 1.0
+    assert score(only, s.request, s.expected)["alternatives"] == 0.5
 
 
 def test_langsmith_eval_module_imports():
