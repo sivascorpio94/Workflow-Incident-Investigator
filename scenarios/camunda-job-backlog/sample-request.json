@@ -45,7 +45,7 @@
       "id": "E-LOG-1",
       "type": "LOG",
       "source": "wf-engine",
-      "timestamp": "2026-03-12T09:41:10Z",
+      "timestamp": "2026-03-12T09:39:40Z",
       "content": "INFO ProcessStartService: bulk start request from batch-importer, 12000 async instances queued (businessKey prefix MIG-2026Q1)."
     },
     {

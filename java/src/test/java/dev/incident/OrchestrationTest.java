@@ -111,9 +111,9 @@ class OrchestrationTest {
                 .doesNotContain(metricContent);
         assertThat(stub.prompts.get("verifier")).contains("<timeline>").contains(metricContent).contains(deployContent)
                 .contains("Runtime analyst report");
-        // timeline is sorted: the 09:41 log precedes the 10:05 deployment
+        // timeline is sorted: the 09:39 log precedes the 10:05 deployment
         String tl = stub.prompts.get("verifier");
-        assertThat(tl.indexOf("2026-03-12T09:41:10Z  [E-LOG-1]")).isLessThan(tl.indexOf("2026-03-12T10:05:00Z  [E-DEP-1]"));
+        assertThat(tl.indexOf("2026-03-12T09:39:40Z  [E-LOG-1]")).isLessThan(tl.indexOf("2026-03-12T10:05:00Z  [E-DEP-1]"));
     }
 
     @Test void expectedCauseIsNeverSentToTheModel() throws Exception {

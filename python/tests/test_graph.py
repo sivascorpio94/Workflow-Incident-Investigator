@@ -78,8 +78,8 @@ def test_analyst_evidence_routing():
     assert "<timeline>" in rt and metric in rt and "bulk start request" in rt and deploy not in rt
     assert "<timeline>" in ch and deploy in ch and "Runbook RB-WF-07" in ch and metric not in ch
     assert "<timeline>" in vf and metric in vf and deploy in vf
-    # timeline is sorted: the 09:41 log precedes the 10:05 deployment
-    assert vf.index("2026-03-12T09:41:10+00:00  [E-LOG-1]") < vf.index("2026-03-12T10:05:00+00:00  [E-DEP-1]")
+    # timeline is sorted: the 09:39 log precedes the 10:05 deployment
+    assert vf.index("2026-03-12T09:39:40+00:00  [E-LOG-1]") < vf.index("2026-03-12T10:05:00+00:00  [E-DEP-1]")
     assert "expectedRootCause" not in " ".join(llm.prompts.values())
 
 
