@@ -19,7 +19,7 @@ request -> validate -> triage -> runtime analyst ‖ change analyst -> verifier 
 
 Contract shared by both: [`contracts/investigation-contract.md`](contracts/investigation-contract.md).
 Scenarios (6, with expected answers kept in separate `incident.yaml` files that are never sent to the model):
-[`scenarios/`](scenarios). Design comparison and findings: [`docs/architecture-comparison.md`](docs/architecture-comparison.md).
+[`scenarios/`](scenarios). Design comparison and findings: [`docs/architecture-comparison.md`](docs/architecture-comparison.md). Short write-up: [`docs/case-study.md`](docs/case-study.md).
 
 Using a separate Bedrock profile/policy/cost tag for this project: [`docs/bedrock-setup.md`](docs/bedrock-setup.md).
 
@@ -43,7 +43,7 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--incident.eval.enabled=true --
 
 ```bash
 cd python && python -m venv .venv && . .venv/bin/activate && pip install -e '.[dev]'
-pytest                                    # 19 deterministic tests, no AWS/LangSmith needed
+pytest                                    # 20 deterministic tests, no AWS/LangSmith needed
 export AWS_REGION=us-east-2 BEDROCK_MODEL_ID=<same model>
 export LANGSMITH_TRACING=true LANGSMITH_API_KEY=<key> LANGSMITH_PROJECT=incident-investigator   # optional
 python -m incident_graph investigate ../scenarios/camunda-job-backlog/sample-request.json

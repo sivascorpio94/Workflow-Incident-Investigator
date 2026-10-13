@@ -1,8 +1,7 @@
 # Spring AI vs LangGraph on this workflow
 
-Status: both implementations are built and unit/integration-tested with stubbed models (Java 37 tests, Python 19).
-**Not yet done:** a live Bedrock run and measured latency/token/cost numbers. Sections marked *(to measure)* must be
-filled in from real runs; nothing below is an observed model result.
+Status: both implementations are built, tested offline with stubbed models (Java 37 tests, Python 20), and have been
+run live against Bedrock (see the results sections). Sections that say "pending" or "to measure" are not yet measured.
 
 ## Same behaviour, different shape
 
@@ -74,15 +73,44 @@ Changes made after round 1, all generic rather than tuned to one incident:
 The `surge-exhausts-db` expectation is a judgement call (a reasonable engineer could rank the database first); it is
 documented in that scenario's `notes` and scored with partial credit rather than as a hard failure.
 
-| Scenario | Java/Haiku 4.5 | Python/Haiku 4.5 |
-|---|---|---|
-| camunda-job-backlog | _pending_ | _pending_ |
-| executor-capacity-regression | _pending_ | _pending_ |
-| database-saturation | _pending_ | _pending_ |
-| retry-storm | _pending_ | _pending_ |
-| insufficient-evidence | _pending_ | _pending_ |
-| surge-exhausts-db | _pending_ | _pending_ |
+## Round 2 results (live, 2026-10-13)
+
+Same model (`us.anthropic.claude-haiku-4-5-20251001-v1:0`), same 8-dimension rubric, same prompts, one run each.
+Cells are overall score; dimensions below 1.00 are listed.
+
+| Scenario | Expected = got? | Java + Spring AI | Python + LangGraph |
+|---|---|---|---|
+| camunda-job-backlog | yes (both) | 1.00 | 0.94 (alternatives 0.70, factDiscipline 0.86) |
+| database-saturation | yes (both) | 1.00 | 1.00 |
+| executor-capacity-regression | yes (both) | 1.00 | 0.96 (factDiscipline 0.67) |
+| insufficient-evidence | yes (both, `UNDETERMINED`) | 0.98 (factDiscipline 0.83) | 1.00 |
+| retry-storm | yes (both) | 0.97 (factDiscipline 0.78) | 0.98 (factDiscipline 0.86) |
+| surge-exhausts-db | yes (both, `LOAD_SURGE` first) | 1.00 | 1.00 |
+| **Mean** | **12 / 12 correct** | **0.99** | **0.98** |
+
+What this does and does not show:
+- **Diagnosis is not framework-dependent.** Both pipelines picked the right cause everywhere, including the
+  `UNDETERMINED` case and the trigger-versus-amplifier case. The 0.01 gap in the mean is within what one run of
+  an LLM varies by; it is not evidence that one framework is better.
+- **Length caps worked:** `concision` is 1.00 in all 12 runs (round 1's baseline had 9 unknowns and 8 recommendations).
+- **Fact discipline is the weak spot (0.67-1.00):** the model still sometimes labels interpretive claims FACT. The
+  check is a word-list heuristic, so some of this may be false positives; read the answers before acting on it.
+- **Python's one `alternatives` miss** (camunda baseline, 0.70): no hypothesis cited contradicting evidence.
+- Single runs, synthetic scenarios, rule-based scoring, one cheap model. Latency and token use were not compared
+  across implementations in this round.
+
+## Observed differences while building and running both
+
+- **Credentials.** Java ran once the stale `AWS_PROFILE` / expiry variables were unset. Python's boto stack read
+  `~/.aws/config` even when an API key was set and failed on an expired `aws login` profile; it needed a small
+  workaround in `llm.py` (covered by an offline test).
+- **Orchestration.** Java parallelism is explicit code (virtual threads + join); LangGraph's is two edges and a
+  reducer. Both tested for real overlap with a rendezvous in the stub model.
+- **Typed output.** Both produced valid typed output on every call in these runs; neither needed retries.
+- **Tracing.** Java: hand-built per-step trace and correlation id, returned in the response. Python: per-step trace in
+  the response; LangSmith tracing is wired but **not yet exercised**.
 
 ## Still to measure
 
-Python/LangGraph run on the same scenarios and model, repeat runs for variance, and a larger model for comparison.
+Repeat runs for variance (e.g. 5 per scenario), a larger model, per-step latency and token totals for Python,
+LangSmith traces and experiment view (`python -m incident_graph eval --langsmith`).
